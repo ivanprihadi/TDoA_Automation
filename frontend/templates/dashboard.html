@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDOA Localization System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ================= HEADER ================= -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-satellite"></i>
+                    <span class="logo-text">TDOA Localization</span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="status-indicators">
+                    <div class="status-item">
+                        <span class="status-dot healthy"></span>
+                        <span class="status-text">System Healthy</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot connected"></span>
+                        <span class="status-text" id="connection-status">Connected</span>
+                    </div>
+                </div>
+                
+                <div class="user-menu">
+                    <img src="https://ui-avatars.com/api/?name=Admin" alt="User" class="user-avatar">
+                    <span class="user-name">Administrator</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ================= NAVIGATION ================= -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <button class="nav-btn active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-btn" onclick="switchTab('processing')">
+                    <i class="fas fa-cog"></i>
+                    <span>Processing</span>
+                </button>
+                <button class="nav-btn" onclick="switchTab('results')">
+                    <i class="fas fa-map"></i>
+                    <span>Results</span>
+                </button>
+                <button class="nav-btn" onclick="switchTab('configuration')">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Configuration</span>
+                </button>
+                <button class="nav-btn" onclick="switchTab('help')">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- ================= MAIN CONTENT ================= -->
+        <main class="main-content">
+            
+            <!-- DASHBOARD TAB -->
+            <div id="dashboard" class="tab-content active">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <p>System overview and status</p>
+                </div>
+
+                <!-- Status Cards -->
+                <div class="grid-4">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #667eea;">
+                            <i class="fas fa-satellite"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="receiver-count">3</h3>
+                            <p>Receivers Active</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f093fb;">
+                            <i class="fas fa-file-csv"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="file-count">0</h3>
+                            <p>Data Files</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #4facfe;">
+                            <i class="fas fa-map"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="map-count">0</h3>
+                            <p>Generated Maps</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #43e97b;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="uptime">100%</h3>
+                            <p>System Status</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Info -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2>System Information</h2>
+                        <button class="btn-secondary btn-sm" onclick="refreshStatus()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Application Details</h3>
+                            <div class="info-group">
+                                <label>Application:</label>
+                                <span id="app-name">TDOA Localization</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Version:</label>
+                                <span id="app-version">1.0.0</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Environment:</label>
+                                <span id="app-env" class="badge badge-success">Production</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Last Update:</label>
+                                <span id="last-update">Just now</span>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Receiver Status</h3>
+                            <div id="receiver-status-list" class="receiver-list">
+                                <div class="loading">Loading receivers...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="section">
+                    <h2>Quick Actions</h2>
+                    <div class="grid-4">
+                        <button class="action-card" onclick="goToProcessing()">
+                            <div class="action-icon">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <h4>Start Processing</h4>
+                            <p>Process new triplet files</p>
+                        </button>
+
+                        <button class="action-card" onclick="goToResults()">
+                            <div class="action-icon">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <h4>View Results</h4>
+                            <p>Check generated maps</p>
+                        </button>
+
+                        <button class="action-card" onclick="downloadResults()">
+                            <div class="action-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <h4>Download Data</h4>
+                            <p>Export results as CSV</p>
+                        </button>
+
+                        <button class="action-card" onclick="switchTab('help')">
+                            <div class="action-icon">
+                                <i class="fas fa-question-circle"></i>
+                            </div>
+                            <h4>Get Help</h4>
+                            <p>Documentation & guides</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROCESSING TAB -->
+            <div id="processing" class="tab-content">
+                <div class="page-header">
+                    <h1>Signal Processing</h1>
+                    <p>Configure and process IQ data files</p>
+                </div>
+
+                <div class="grid-2">
+                    <!-- File Selection -->
+                    <div class="section">
+                        <h2>File Selection</h2>
+                        <div class="card">
+                            <div class="form-group">
+                                <label>Receiver 1 (RX1) File:</label>
+                                <select id="file1" class="input-select" onchange="updateFileSelection()">
+                                    <option value="">-- Select File --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Receiver 2 (RX2) File:</label>
+                                <select id="file2" class="input-select" onchange="updateFileSelection()">
+                                    <option value="">-- Select File --</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Receiver 3 (RX3) File:</label>
+                                <select id="file3" class="input-select" onchange="updateFileSelection()">
+                                    <option value="">-- Select File --</option>
+                                </select>
+                            </div>
+
+                            <div class="file-info">
+                                <p><i class="fas fa-info-circle"></i> Files must be in .dat format (RTL-SDR)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Parameters -->
+                    <div class="section">
+                        <h2>Processing Parameters</h2>
+                        <div class="card">
+                            <div class="form-group">
+                                <label>Signal Bandwidth (kHz):</label>
+                                <input type="number" id="bandwidth" class="input-text" value="40" min="10" max="400">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Correlation Type:</label>
+                                <select id="corr-type" class="input-select">
+                                    <option value="dphase">Differential Phase</option>
+                                    <option value="complex">Complex Correlation</option>
+                                    <option value="magnitude">Magnitude</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Smoothing Factor:</label>
+                                <input type="number" id="smoothing" class="input-text" value="0" min="0" max="100">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Interpolation Factor:</label>
+                                <input type="number" id="interpol" class="input-text" value="0" min="0" max="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization Parameters -->
+                <div class="section">
+                    <h2>Visualization Settings</h2>
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="form-group">
+                                <label>Heatmap Resolution:</label>
+                                <input type="number" id="heatmap-res" class="input-text" value="200" min="50" max="500">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Heatmap Threshold (0-1):</label>
+                                <input type="number" id="heatmap-thresh" class="input-text" value="0.70" min="0" max="1" step="0.05">
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="form-group">
+                                <label>Map Zoom Level:</label>
+                                <input type="number" id="map-zoom" class="input-text" value="13" min="1" max="20">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Reference Color Scheme:</label>
+                                <select id="color-scheme" class="input-select">
+                                    <option value="viridis">Viridis</option>
+                                    <option value="plasma">Plasma</option>
+                                    <option value="inferno">Inferno</option>
+                                    <option value="hot">Hot</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process Button -->
+                <div class="section section-action">
+                    <button id="process-btn" class="btn-primary btn-lg" onclick="processFiles()">
+                        <i class="fas fa-rocket"></i> Start Processing
+                    </button>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="progress-section" class="section" style="display: none;">
+                    <h2>Processing Progress</h2>
+                    <div class="card">
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <p id="progress-text" class="progress-text">Initializing...</p>
+                        </div>
+
+                        <div id="processing-log" class="log-viewer">
+                            <!-- Log entries will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTS TAB -->
+            <div id="results" class="tab-content">
+                <div class="page-header">
+                    <h1>Results & Maps</h1>
+                    <p>View generated localization maps and results</p>
+                </div>
+
+                <!-- Last Result Summary -->
+                <div class="section">
+                    <h2>Last Processing Result</h2>
+                    <div class="card">
+                        <div id="result-summary">
+                            <p class="text-muted"><i class="fas fa-inbox"></i> No results yet. Process some files first!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generated Maps -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Generated Maps</h2>
+                        <button class="btn-secondary btn-sm" onclick="loadMaps()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div id="maps-list" class="grid-3">
+                        <div class="loading">Loading maps...</div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="section">
+                    <h2>Export Options</h2>
+                    <div class="button-group">
+                        <button class="btn-secondary" onclick="exportAsCSV()">
+                            <i class="fas fa-download"></i> Export Results CSV
+                        </button>
+                        <button class="btn-secondary" onclick="exportAsJSON()">
+                            <i class="fas fa-download"></i> Export Results JSON
+                        </button>
+                        <button class="btn-secondary" onclick="printReport()">
+                            <i class="fas fa-print"></i> Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONFIGURATION TAB -->
+            <div id="configuration" class="tab-content">
+                <div class="page-header">
+                    <h1>Configuration</h1>
+                    <p>System settings and receiver configuration</p>
+                </div>
+
+                <div class="section">
+                    <h2>Receiver Configuration</h2>
+                    <div class="grid-3">
+                        <div id="receiver-config-list">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>System Settings</h2>
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>Signal Processing</h3>
+                            <div class="info-group">
+                                <label>Sample Rate:</label>
+                                <span id="config-sample-rate">2.048 MSPS</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Default Bandwidth:</label>
+                                <span id="config-bandwidth">40 kHz</span>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Output Directories</h3>
+                            <div class="info-group">
+                                <label>Data Directory:</label>
+                                <span id="config-data-dir" style="font-size: 12px;">./output/recorded_data</span>
+                            </div>
+                            <div class="info-group">
+                                <label>Maps Directory:</label>
+                                <span id="config-maps-dir" style="font-size: 12px;">./output/maps</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Full Configuration</h2>
+                    <div class="card">
+                        <pre id="config-display" class="code-block">Loading configuration...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HELP TAB -->
+            <div id="help" class="tab-content">
+                <div class="page-header">
+                    <h1>Help & Documentation</h1>
+                    <p>User guide and frequently asked questions</p>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3><i class="fas fa-book"></i> Getting Started</h3>
+                        <p>
+                            Welcome to TDOA Localization System! Here's how to get started:
+                        </p>
+                        <ol>
+                            <li>Prepare 3 IQ data files from your receivers</li>
+                            <li>Go to "Processing" tab</li>
+                            <li>Select the files and configure parameters</li>
+                            <li>Click "Start Processing"</li>
+                            <li>View results in "Results" tab</li>
+                        </ol>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-question-circle"></i> FAQ</h3>
+                        <p><strong>Q: What file format is required?</strong></p>
+                        <p>A: IQ data files in .dat format from RTL-SDR devices</p>
+                        
+                        <p><strong>Q: How long does processing take?</strong></p>
+                        <p>A: Typically 30-60 seconds depending on file size</p>
+                        
+                        <p><strong>Q: Can I process multiple triplets?</strong></p>
+                        <p>A: Yes, use batch processing mode</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>System Requirements</h2>
+                    <div class="card">
+                        <ul class="requirements-list">
+                            <li><strong>CPU:</strong> 4 cores minimum</li>
+                            <li><strong>RAM:</strong> 8GB recommended</li>
+                            <li><strong>Storage:</strong> 50GB for signal data</li>
+                            <li><strong>Network:</strong> 3 Raspberry Pi receivers</li>
+                            <li><strong>Software:</strong> Python 3.8+</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Contact & Support</h2>
+                    <div class="card">
+                        <p><i class="fas fa-envelope"></i> Email: <strong>support@tdoa.local</strong></p>
+                        <p><i class="fas fa-globe"></i> Website: <strong>https://tdoa.local</strong></p>
+                        <p><i class="fas fa-github"></i> GitHub: <strong>github.com/tdoa/automation</strong></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ================= FOOTER ================= -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2024 TDOA Localization System. All rights reserved.</p>
+                <p id="footer-time">Loading...</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

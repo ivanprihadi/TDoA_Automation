@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDOA Automation System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 5px; }
+        .subtitle { color: #999; font-size: 14px; }
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .nav a {
+            color: #666;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .nav a:hover { background: #eee; }
+        .nav a.active { color: #667eea; font-weight: bold; background: #f0f0ff; }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .card p {
+            color: #666;
+            line-height: 1.8;
+            margin: 10px 0;
+        }
+        .status-item {
+            background: #f9f9f9;
+            padding: 10px;
+            border-left: 3px solid #667eea;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .label { color: #999; font-size: 12px; }
+        .value {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .receiver-list {
+            list-style: none;
+        }
+        .receiver-list li {
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 3px;
+            border-left: 3px solid #667eea;
+        }
+        .loading {
+            color: #999;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛰️ TDOA Automation System</h1>
+        <p class="subtitle">Time Difference of Arrival Localization</p>
+        <div class="nav">
+            <a class="active">Dashboard</a>
+            <a>Receivers</a>
+            <a>TDOA</a>
+            <a>Results</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- System Status Card -->
+        <div class="card">
+            <h2>System Status</h2>
+            <div id="status-content">
+                <div class="loading">Loading system status...</div>
+            </div>
+        </div>
+
+        <!-- Receivers Card -->
+        <div class="card">
+            <h2>Receivers</h2>
+            <div id="receivers-content">
+                <div class="loading">Loading receivers...</div>
+            </div>
+        </div>
+
+        <!-- Configuration Card -->
+        <div class="card">
+            <h2>Configuration</h2>
+            <div id="config-content">
+                <div class="loading">Loading configuration...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load System Status
+        console.log("Fetching /api/status...");
+        fetch('/api/status')
+            .then(response => {
+                console.log("Status response:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Status data:", data);
+                let html = '<div class="status-item">';
+                html += '<div class="label">System Status</div>';
+                html += '<div class="value">' + (data.system || 'Unknown') + '</div>';
+                html += '</div>';
+                html += '<div class="status-item">';
+                html += '<div class="label">Environment</div>';
+                html += '<div class="value">' + (data.environment || 'production') + '</div>';
+                html += '</div>';
+                html += '<div class="status-item">';
+                html += '<div class="label">Version</div>';
+                html += '<div class="value">' + (data.version || '1.0.0') + '</div>';
+                html += '</div>';
+                document.getElementById('status-content').innerHTML = html;
+            })
+            .catch(error => {
+                console.error("Status error:", error);
+                document.getElementById('status-content').innerHTML = 
+                    '<div class="error">Error loading status: ' + error.message + '</div>';
+            });
+
+        // Load Receivers
+        console.log("Fetching /api/receivers...");
+        fetch('/api/receivers')
+            .then(response => {
+                console.log("Receivers response:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Receivers data:", data);
+                let html = '<p><strong>Active Receivers: ' + data.length + '</strong></p>';
+                if (data.length > 0) {
+                    html += '<ul class="receiver-list">';
+                    data.forEach(rx => {
+                        html += '<li>';
+                        html += '<strong>' + (rx.name || 'Unknown') + '</strong><br>';
+                        html += 'Host: ' + (rx.hostname || 'N/A') + '<br>';
+                        html += 'Port: ' + (rx.port || 'N/A');
+                        html += '</li>';
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p class="loading">No receivers available</p>';
+                }
+                document.getElementById('receivers-content').innerHTML = html;
+            })
+            .catch(error => {
+                console.error("Receivers error:", error);
+                document.getElementById('receivers-content').innerHTML = 
+                    '<div class="error">Error loading receivers: ' + error.message + '</div>';
+            });
+
+        // Load Configuration
+        console.log("Fetching /api/config...");
+        fetch('/api/config')
+            .then(response => {
+                console.log("Config response:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Config data:", data);
+                let html = '<div class="status-item">';
+                html += '<div class="label">Mode</div>';
+                html += '<div class="value">' + (data.mode || 'unknown') + '</div>';
+                html += '</div>';
+                html += '<div class="status-item">';
+                html += '<div class="label">Receivers Configured</div>';
+                html += '<div class="value">' + (data.receivers_count || '0') + '</div>';
+                html += '</div>';
+                document.getElementById('config-content').innerHTML = html;
+            })
+            .catch(error => {
+                console.error("Config error:", error);
+                document.getElementById('config-content').innerHTML = 
+                    '<div class="error">Error loading config: ' + error.message + '</div>';
+            });
+    </script>
+</body>
+</html>

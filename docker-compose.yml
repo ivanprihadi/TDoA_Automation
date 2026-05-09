@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  tdoa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    container_name: tdoa-localization
+    
+    ports:
+      - "5000:5000"
+    
+    volumes:
+      - ./config.json:/app/config.json
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./recorded_data:/app/recorded_data
+    
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - PYTHONUNBUFFERED=1
+    
+    restart: unless-stopped
+    
+    networks:
+      - tdoa-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  tdoa-network:
+    driver: bridge

@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "application": {
+    "name": "TDOA Automation System",
+    "description": "Time Difference of Arrival based RF source localization",
+    "version": "1.0.0",
+    "environment": "production"
+  },
+  "network": {
+    "receivers": [
+      {
+        "id": 1,
+        "name": "RX1",
+        "host": "172.26.37.122",
+        "port": 22,
+        "username": "pi",
+        "latitude": -7.2884674,
+        "longitude": 112.6983234,
+        "altitude_m": 50
+      },
+      {
+        "id": 2,
+        "name": "RX2",
+        "host": "172.26.11.252",
+        "port": 22,
+        "username": "pi",
+        "latitude": -7.2886674,
+        "longitude": 112.7003234,
+        "altitude_m": 50
+      },
+      {
+        "id": 3,
+        "name": "RX3",
+        "host": "172.26.151.164",
+        "port": 22,
+        "username": "pi",
+        "latitude": -7.2895674,
+        "longitude": 112.6993234,
+        "altitude_m": 50
+      }
+    ]
+  },
+  "receivers": {
+    "rx1": {
+      "name": "RX1",
+      "latitude": -7.2884674,
+      "longitude": 112.6983234,
+      "ssh_host": "172.26.37.122",
+      "ssh_user": "pi",
+      "remote_data_dir": "/home/pi/recorded_data"
+    },
+    "rx2": {
+      "name": "RX2",
+      "latitude": -7.2886674,
+      "longitude": 112.7003234,
+      "ssh_host": "172.26.11.252",
+      "ssh_user": "pi",
+      "remote_data_dir": "/home/pi/recorded_data"
+    },
+    "rx3": {
+      "name": "RX3",
+      "latitude": -7.2895674,
+      "longitude": 112.6993234,
+      "ssh_host": "172.26.151.164",
+      "ssh_user": "pi",
+      "remote_data_dir": "/home/pi/recorded_data"
+    }
+  },
+  "transmitter": {
+    "reference": {
+      "name": "Reference TX",
+      "latitude": -7.2885674,
+      "longitude": 112.6993234,
+      "altitude": 50
+    }
+  },
+  "center_point": {
+    "latitude": -7.2885674,
+    "longitude": 112.6993234
+  },
+  "signal_processing": {
+    "sample_rate": 2048000,
+    "bandwidth_khz": 40,
+    "correlation_type": "dphase",
+    "smoothing_factor": 0
+  },
+  "visualization": {
+    "heatmap_resolution": 200,
+    "heatmap_threshold": 0.70,
+    "map_zoom_level": 13,
+    "map_tile_provider": "openstreetmap"
+  },
+  "output": {
+    "base_dir": "./output",
+    "data_dir": "./output/recorded_data",
+    "map_dir": "./output/maps",
+    "results_dir": "./output/results"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/app.log"
+  }
+}
