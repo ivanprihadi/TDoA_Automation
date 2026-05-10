@@ -4,501 +4,1360 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TDOA Localization System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* ==================== ROOT VARIABLES ==================== */
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #51cf66;
+            --warning: #ffd43b;
+            --danger: #ff6b6b;
+            --info: #4c6ef5;
+            --light: #f5f6fa;
+            --dark: #2d3748;
+            --border-color: #e2e8f0;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        /* ==================== GLOBAL STYLES ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .header-item {
+            text-align: center;
+        }
+
+        .header-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .header-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        /* ==================== NAV TABS ==================== */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            background: #f5f6fa;
+            color: #666;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background: #efefef;
+            color: var(--primary);
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ==================== TAB CONTENT ==================== */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ==================== CARDS ==================== */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .card h2, .card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card h4 {
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        /* ==================== GRID LAYOUT ==================== */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .grid-1 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* ==================== STAT BOXES ==================== */
+        .stat-box {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-box .label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-box .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-box .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        /* ==================== INFO GROUPS ==================== */
+        .info-group {
+            margin-bottom: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-group:last-child {
+            border-bottom: none;
+        }
+
+        .info-group label {
+            font-weight: 600;
+            color: var(--dark);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .info-group span {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* ==================== BUTTONS ==================== */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ==================== MODAL ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .modal-indicator {
+            font-size: 11px;
+            color: #ff6b6b;
+            margin-top: 5px;
+            padding: 8px;
+            background: #fff5f5;
+            border-radius: 4px;
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        /* ==================== FORM ELEMENTS ==================== */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-note {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* ==================== RADIO & CHECKBOX ==================== */
+        .form-radio {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-radio label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .form-radio input[type="radio"],
+        .form-radio input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        /* ==================== STATUS BOXES ==================== */
+        .status-box {
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+            display: none;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status-box.show {
+            display: block;
+        }
+
+        .status-box.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status-box.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #51cf66;
+        }
+
+        .status-box.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #ffd43b;
+        }
+
+        .status-box.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        /* ==================== PROGRESS BAR ==================== */
+        .progress-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* ==================== LIST ITEMS ==================== */
+        .receiver-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .receiver-item strong {
+            display: block;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .receiver-item span {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-badge.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-badge.warning {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-badge.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* ==================== MAPS ==================== */
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .maps-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .maps-card:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .maps-card-thumbnail {
+            width: 100%;
+            height: 120px;
+            background: #f5f6fa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            color: #999;
+        }
+
+        /* ==================== TOAST NOTIFICATIONS ==================== */
+        .toast {
+            position: fixed;
+            bottom: -100px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            transition: var(--transition);
+            z-index: 999;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            bottom: 20px;
+        }
+
+        .toast.info {
+            background: var(--info);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.warning {
+            background: var(--warning);
+            color: #333;
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            margin-top: 30px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            font-size: 12px;
+            color: #999;
+        }
+
+        .footer-time {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .grid-3, .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+
+            .nav-btn {
+                min-width: 100px;
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 20px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+
+        /* ==================== LOADING SPINNER ==================== */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- ================= HEADER ================= -->
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">
-                    <i class="fas fa-satellite"></i>
-                    <span class="logo-text">TDOA Localization</span>
+        <!-- ==================== HEADER ==================== -->
+        <div class="header">
+            <h1>
+                <i class="fas fa-broadcast-tower"></i>
+                TDOA Localization
+            </h1>
+            <div class="header-info">
+                <div class="header-item">
+                    <div class="header-label">User</div>
+                    <div class="header-value">Administrator</div>
                 </div>
             </div>
-            
-            <div class="header-right">
-                <div class="status-indicators">
-                    <div class="status-item">
-                        <span class="status-dot healthy"></span>
-                        <span class="status-text">System Healthy</span>
+        </div>
+
+        <!-- ==================== NAV TABS ==================== -->
+        <div class="nav-tabs">
+            <button class="nav-btn active" onclick="switchTab('dashboard')">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </button>
+            <button class="nav-btn" onclick="switchTab('processing')">
+                <i class="fas fa-cog"></i> Processing
+            </button>
+            <button class="nav-btn" onclick="switchTab('results')">
+                <i class="fas fa-map"></i> Results
+            </button>
+            <button class="nav-btn" onclick="switchTab('configuration')">
+                <i class="fas fa-sliders-h"></i> Configuration
+            </button>
+            <button class="nav-btn" onclick="switchTab('help')">
+                <i class="fas fa-question-circle"></i> Help
+            </button>
+            <button class="btn btn-primary" id="recordBtn">
+                <i class="fas fa-microphone"></i> Start Recording
+            </button>
+        </div>
+
+        <!-- ==================== DASHBOARD TAB ==================== -->
+        <div id="dashboard" class="tab-content active">
+            <div class="card">
+                <h2><i class="fas fa-chart-pie"></i> Dashboard</h2>
+                <p style="color: #666; margin-bottom: 20px;">System status and overview</p>
+
+                <!-- Statistics -->
+                <div class="grid-3">
+                    <div class="stat-box">
+                        <div class="icon"><i class="fas fa-broadcast-tower"></i></div>
+                        <div class="label">Receivers Active</div>
+                        <div class="value" id="receiver-count">3</div>
                     </div>
-                    <div class="status-item">
-                        <span class="status-dot connected"></span>
-                        <span class="status-text" id="connection-status">Connected</span>
+                    <div class="stat-box">
+                        <div class="icon"><i class="fas fa-file"></i></div>
+                        <div class="label">Data Files</div>
+                        <div class="value" id="file-count">0</div>
                     </div>
-                </div>
-                
-                <div class="user-menu">
-                    <img src="https://ui-avatars.com/api/?name=Admin" alt="User" class="user-avatar">
-                    <span class="user-name">Administrator</span>
-                </div>
-            </div>
-        </header>
-
-        <!-- ================= NAVIGATION ================= -->
-        <nav class="navbar">
-            <div class="nav-container">
-                <button class="nav-btn active" onclick="switchTab('dashboard')">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Dashboard</span>
-                </button>
-                <button class="nav-btn" onclick="switchTab('processing')">
-                    <i class="fas fa-cog"></i>
-                    <span>Processing</span>
-                </button>
-                <button class="nav-btn" onclick="switchTab('results')">
-                    <i class="fas fa-map"></i>
-                    <span>Results</span>
-                </button>
-                <button class="nav-btn" onclick="switchTab('configuration')">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>Configuration</span>
-                </button>
-                <button class="nav-btn" onclick="switchTab('help')">
-                    <i class="fas fa-question-circle"></i>
-                    <span>Help</span>
-                </button>
-            </div>
-        </nav>
-
-        <!-- ================= MAIN CONTENT ================= -->
-        <main class="main-content">
-            
-            <!-- DASHBOARD TAB -->
-            <div id="dashboard" class="tab-content active">
-                <div class="page-header">
-                    <h1>Dashboard</h1>
-                    <p>System overview and status</p>
-                </div>
-
-                <!-- Status Cards -->
-                <div class="grid-4">
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #667eea;">
-                            <i class="fas fa-satellite"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="receiver-count">3</h3>
-                            <p>Receivers Active</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #f093fb;">
-                            <i class="fas fa-file-csv"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="file-count">0</h3>
-                            <p>Data Files</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #4facfe;">
-                            <i class="fas fa-map"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="map-count">0</h3>
-                            <p>Generated Maps</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #43e97b;">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="uptime">100%</h3>
-                            <p>System Status</p>
-                        </div>
+                    <div class="stat-box">
+                        <div class="icon"><i class="fas fa-map"></i></div>
+                        <div class="label">Generated Maps</div>
+                        <div class="value" id="map-count">0</div>
                     </div>
                 </div>
 
                 <!-- System Info -->
-                <div class="section">
-                    <div class="section-header">
-                        <h2>System Information</h2>
-                        <button class="btn-secondary btn-sm" onclick="refreshStatus()">
-                            <i class="fas fa-sync"></i> Refresh
-                        </button>
-                    </div>
-
-                    <div class="grid-2">
-                        <div class="card">
-                            <h3>Application Details</h3>
-                            <div class="info-group">
-                                <label>Application:</label>
-                                <span id="app-name">TDOA Localization</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Version:</label>
-                                <span id="app-version">1.0.0</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Environment:</label>
-                                <span id="app-env" class="badge badge-success">Production</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Last Update:</label>
-                                <span id="last-update">Just now</span>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <h3>Receiver Status</h3>
-                            <div id="receiver-status-list" class="receiver-list">
-                                <div class="loading">Loading receivers...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="section">
-                    <h2>Quick Actions</h2>
-                    <div class="grid-4">
-                        <button class="action-card" onclick="goToProcessing()">
-                            <div class="action-icon">
-                                <i class="fas fa-play-circle"></i>
-                            </div>
-                            <h4>Start Processing</h4>
-                            <p>Process new triplet files</p>
-                        </button>
-
-                        <button class="action-card" onclick="goToResults()">
-                            <div class="action-icon">
-                                <i class="fas fa-folder-open"></i>
-                            </div>
-                            <h4>View Results</h4>
-                            <p>Check generated maps</p>
-                        </button>
-
-                        <button class="action-card" onclick="downloadResults()">
-                            <div class="action-icon">
-                                <i class="fas fa-download"></i>
-                            </div>
-                            <h4>Download Data</h4>
-                            <p>Export results as CSV</p>
-                        </button>
-
-                        <button class="action-card" onclick="switchTab('help')">
-                            <div class="action-icon">
-                                <i class="fas fa-question-circle"></i>
-                            </div>
-                            <h4>Get Help</h4>
-                            <p>Documentation & guides</p>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PROCESSING TAB -->
-            <div id="processing" class="tab-content">
-                <div class="page-header">
-                    <h1>Signal Processing</h1>
-                    <p>Configure and process IQ data files</p>
-                </div>
-
                 <div class="grid-2">
-                    <!-- File Selection -->
-                    <div class="section">
-                        <h2>File Selection</h2>
-                        <div class="card">
-                            <div class="form-group">
-                                <label>Receiver 1 (RX1) File:</label>
-                                <select id="file1" class="input-select" onchange="updateFileSelection()">
-                                    <option value="">-- Select File --</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Receiver 2 (RX2) File:</label>
-                                <select id="file2" class="input-select" onchange="updateFileSelection()">
-                                    <option value="">-- Select File --</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Receiver 3 (RX3) File:</label>
-                                <select id="file3" class="input-select" onchange="updateFileSelection()">
-                                    <option value="">-- Select File --</option>
-                                </select>
-                            </div>
-
-                            <div class="file-info">
-                                <p><i class="fas fa-info-circle"></i> Files must be in .dat format (RTL-SDR)</p>
-                            </div>
+                    <div>
+                        <h3>System Information</h3>
+                        <div class="info-group">
+                            <label>Application:</label>
+                            <span id="app-name">TDOA Localization</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Version:</label>
+                            <span id="app-version">1.0.0</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Environment:</label>
+                            <span id="app-env">Production</span>
+                        </div>
+                        <div class="info-group">
+                            <label>Status:</label>
+                            <span id="system-status" style="color: var(--success); font-weight: bold;">● Running</span>
+                        </div>
+                        <div class="info-group">
+                            <label>System Health:</label>
+                            <span style="color: var(--success); font-weight: bold;">100%</span>
                         </div>
                     </div>
 
-                    <!-- Processing Parameters -->
-                    <div class="section">
-                        <h2>Processing Parameters</h2>
-                        <div class="card">
-                            <div class="form-group">
-                                <label>Signal Bandwidth (kHz):</label>
-                                <input type="number" id="bandwidth" class="input-text" value="40" min="10" max="400">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Correlation Type:</label>
-                                <select id="corr-type" class="input-select">
-                                    <option value="dphase">Differential Phase</option>
-                                    <option value="complex">Complex Correlation</option>
-                                    <option value="magnitude">Magnitude</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Smoothing Factor:</label>
-                                <input type="number" id="smoothing" class="input-text" value="0" min="0" max="100">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Interpolation Factor:</label>
-                                <input type="number" id="interpol" class="input-text" value="0" min="0" max="10">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Visualization Parameters -->
-                <div class="section">
-                    <h2>Visualization Settings</h2>
-                    <div class="grid-2">
-                        <div class="card">
-                            <div class="form-group">
-                                <label>Heatmap Resolution:</label>
-                                <input type="number" id="heatmap-res" class="input-text" value="200" min="50" max="500">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Heatmap Threshold (0-1):</label>
-                                <input type="number" id="heatmap-thresh" class="input-text" value="0.70" min="0" max="1" step="0.05">
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="form-group">
-                                <label>Map Zoom Level:</label>
-                                <input type="number" id="map-zoom" class="input-text" value="13" min="1" max="20">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Reference Color Scheme:</label>
-                                <select id="color-scheme" class="input-select">
-                                    <option value="viridis">Viridis</option>
-                                    <option value="plasma">Plasma</option>
-                                    <option value="inferno">Inferno</option>
-                                    <option value="hot">Hot</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Process Button -->
-                <div class="section section-action">
-                    <button id="process-btn" class="btn-primary btn-lg" onclick="processFiles()">
-                        <i class="fas fa-rocket"></i> Start Processing
-                    </button>
-                </div>
-
-                <!-- Progress Section -->
-                <div id="progress-section" class="section" style="display: none;">
-                    <h2>Processing Progress</h2>
-                    <div class="card">
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div id="progress-fill" class="progress-fill"></div>
-                            </div>
-                            <p id="progress-text" class="progress-text">Initializing...</p>
-                        </div>
-
-                        <div id="processing-log" class="log-viewer">
-                            <!-- Log entries will be added here -->
+                    <div>
+                        <h3>Active Receivers</h3>
+                        <div id="receiver-status-list">
+                            <p style="color: #999;">Loading receivers...</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- RESULTS TAB -->
-            <div id="results" class="tab-content">
-                <div class="page-header">
-                    <h1>Results & Maps</h1>
-                    <p>View generated localization maps and results</p>
-                </div>
+        <!-- ==================== PROCESSING TAB ==================== -->
+        <div id="processing" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-cog"></i> Signal Processing</h2>
+                <p style="color: #666; margin-bottom: 20px;">Configure and process IQ data</p>
 
-                <!-- Last Result Summary -->
-                <div class="section">
-                    <h2>Last Processing Result</h2>
-                    <div class="card">
-                        <div id="result-summary">
-                            <p class="text-muted"><i class="fas fa-inbox"></i> No results yet. Process some files first!</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Generated Maps -->
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Generated Maps</h2>
-                        <button class="btn-secondary btn-sm" onclick="loadMaps()">
-                            <i class="fas fa-sync"></i> Refresh
-                        </button>
-                    </div>
-
-                    <div id="maps-list" class="grid-3">
-                        <div class="loading">Loading maps...</div>
-                    </div>
-                </div>
-
-                <!-- Export Options -->
-                <div class="section">
-                    <h2>Export Options</h2>
-                    <div class="button-group">
-                        <button class="btn-secondary" onclick="exportAsCSV()">
-                            <i class="fas fa-download"></i> Export Results CSV
-                        </button>
-                        <button class="btn-secondary" onclick="exportAsJSON()">
-                            <i class="fas fa-download"></i> Export Results JSON
-                        </button>
-                        <button class="btn-secondary" onclick="printReport()">
-                            <i class="fas fa-print"></i> Print Report
-                        </button>
+                <div class="grid-1">
+                    <div>
+                        <h3>Processing Functionality</h3>
+                        <p style="color: #999;">Processing features coming soon...</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- CONFIGURATION TAB -->
-            <div id="configuration" class="tab-content">
-                <div class="page-header">
-                    <h1>Configuration</h1>
-                    <p>System settings and receiver configuration</p>
+        <!-- ==================== RESULTS TAB ==================== -->
+        <div id="results" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-map"></i> Results & Maps</h2>
+                <p style="color: #666; margin-bottom: 20px;">View generated localization results</p>
+
+                <!-- Map Display -->
+                <div id="map" style="display: none;"></div>
+
+                <!-- Results List -->
+                <div id="maps-list">
+                    <p style="color: #999; text-align: center; padding: 40px;">
+                        <i class="fas fa-inbox" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                        Results will appear here...
+                    </p>
                 </div>
 
-                <div class="section">
-                    <h2>Receiver Configuration</h2>
-                    <div class="grid-3">
-                        <div id="receiver-config-list">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>System Settings</h2>
-                    <div class="grid-2">
-                        <div class="card">
-                            <h3>Signal Processing</h3>
-                            <div class="info-group">
-                                <label>Sample Rate:</label>
-                                <span id="config-sample-rate">2.048 MSPS</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Default Bandwidth:</label>
-                                <span id="config-bandwidth">40 kHz</span>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <h3>Output Directories</h3>
-                            <div class="info-group">
-                                <label>Data Directory:</label>
-                                <span id="config-data-dir" style="font-size: 12px;">./output/recorded_data</span>
-                            </div>
-                            <div class="info-group">
-                                <label>Maps Directory:</label>
-                                <span id="config-maps-dir" style="font-size: 12px;">./output/maps</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>Full Configuration</h2>
-                    <div class="card">
-                        <pre id="config-display" class="code-block">Loading configuration...</pre>
-                    </div>
+                <!-- Result Summary -->
+                <div id="result-summary" style="margin-top: 20px;">
+                    <!-- Summary content here -->
                 </div>
             </div>
+        </div>
 
-            <!-- HELP TAB -->
-            <div id="help" class="tab-content">
-                <div class="page-header">
-                    <h1>Help & Documentation</h1>
-                    <p>User guide and frequently asked questions</p>
-                </div>
+        <!-- ==================== CONFIGURATION TAB ==================== -->
+        <div id="configuration" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-sliders-h"></i> Configuration</h2>
+                <p style="color: #666; margin-bottom: 20px;">System settings and receiver configuration</p>
 
+                <h3 style="margin-top: 20px;">Signal Processing Settings</h3>
                 <div class="grid-2">
-                    <div class="card">
-                        <h3><i class="fas fa-book"></i> Getting Started</h3>
-                        <p>
-                            Welcome to TDOA Localization System! Here's how to get started:
-                        </p>
-                        <ol>
-                            <li>Prepare 3 IQ data files from your receivers</li>
-                            <li>Go to "Processing" tab</li>
-                            <li>Select the files and configure parameters</li>
-                            <li>Click "Start Processing"</li>
-                            <li>View results in "Results" tab</li>
-                        </ol>
+                    <div class="info-group">
+                        <label>Sample Rate:</label>
+                        <span id="config-sample-rate">2.4 MSPS</span>
                     </div>
-
-                    <div class="card">
-                        <h3><i class="fas fa-question-circle"></i> FAQ</h3>
-                        <p><strong>Q: What file format is required?</strong></p>
-                        <p>A: IQ data files in .dat format from RTL-SDR devices</p>
-                        
-                        <p><strong>Q: How long does processing take?</strong></p>
-                        <p>A: Typically 30-60 seconds depending on file size</p>
-                        
-                        <p><strong>Q: Can I process multiple triplets?</strong></p>
-                        <p>A: Yes, use batch processing mode</p>
+                    <div class="info-group">
+                        <label>Bandwidth:</label>
+                        <span id="config-bandwidth">40 kHz</span>
+                    </div>
+                    <div class="info-group">
+                        <label>Data Directory:</label>
+                        <span id="config-data-dir">./output/recorded_data</span>
+                    </div>
+                    <div class="info-group">
+                        <label>Maps Directory:</label>
+                        <span id="config-maps-dir">./output/maps</span>
                     </div>
                 </div>
 
-                <div class="section">
-                    <h2>System Requirements</h2>
-                    <div class="card">
-                        <ul class="requirements-list">
-                            <li><strong>CPU:</strong> 4 cores minimum</li>
-                            <li><strong>RAM:</strong> 8GB recommended</li>
-                            <li><strong>Storage:</strong> 50GB for signal data</li>
-                            <li><strong>Network:</strong> 3 Raspberry Pi receivers</li>
-                            <li><strong>Software:</strong> Python 3.8+</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>Contact & Support</h2>
-                    <div class="card">
-                        <p><i class="fas fa-envelope"></i> Email: <strong>support@tdoa.local</strong></p>
-                        <p><i class="fas fa-globe"></i> Website: <strong>https://tdoa.local</strong></p>
-                        <p><i class="fas fa-github"></i> GitHub: <strong>github.com/tdoa/automation</strong></p>
-                    </div>
+                <h3 style="margin-top: 20px;">Receiver Configuration</h3>
+                <div id="receiver-config-list">
+                    <p style="color: #999;">Loading receiver configuration...</p>
                 </div>
             </div>
-        </main>
+        </div>
 
-        <!-- ================= FOOTER ================= -->
-        <footer class="footer">
-            <div class="footer-content">
-                <p>&copy; 2024 TDOA Localization System. All rights reserved.</p>
-                <p id="footer-time">Loading...</p>
+        <!-- ==================== HELP TAB ==================== -->
+        <div id="help" class="tab-content">
+            <div class="card">
+                <h2><i class="fas fa-question-circle"></i> Help & Documentation</h2>
+                <p style="color: #666; margin-bottom: 20px;">User guide and FAQ</p>
+
+                <h3>Getting Started</h3>
+                <ol style="margin-left: 20px; color: #666; line-height: 1.8; margin-bottom: 20px;">
+                    <li>Click "Start Recording" to begin a recording session</li>
+                    <li>Configure reference and target frequencies (FM band: 87-108 MHz)</li>
+                    <li>Set number of loops (each loop records ~3 seconds)</li>
+                    <li>Choose synchronization mode (NTP or GPS)</li>
+                    <li>Click "Start Recording" to initiate recording on all receivers</li>
+                    <li>Monitor progress in the progress dialog</li>
+                    <li>View results in the Results tab once complete</li>
+                </ol>
+
+                <h3>System Requirements</h3>
+                <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <li>3 synchronized RTL-SDR receivers</li>
+                    <li>Known receiver coordinates (latitude, longitude, altitude)</li>
+                    <li>Target frequency in FM band (87-108 MHz)</li>
+                    <li>Reference frequency for calibration (must be different from target)</li>
+                    <li>Network connectivity between PC and receivers</li>
+                </ul>
+
+                <h3 style="margin-top: 20px;">Troubleshooting</h3>
+                <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <li><strong>Recording stuck:</strong> Check if receivers are online and hardware connected</li>
+                    <li><strong>No results:</strong> Ensure sufficient signal strength at target frequency</li>
+                    <li><strong>Inaccurate location:</strong> Verify receiver coordinates and synchronization</li>
+                    <li><strong>Connection timeout:</strong> Check network connectivity and firewall settings</li>
+                </ul>
             </div>
-        </footer>
+        </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- ==================== RECORDING MODAL ==================== -->
+    <div id="recordingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-microphone"></i> Start Recording Session</h2>
+                <button class="close" onclick="closeRecordingDialog()">&times;</button>
+            </div>
+            <div class="modal-indicator" id="mock-mode-indicator">🎭 <strong>Checking mode...</strong></div>
+
+            <form id="recordingForm">
+                <!-- Reference Frequency -->
+                <div class="form-group">
+                    <label for="refFreq">
+                        <i class="fas fa-broadcast-tower"></i> Reference Frequency (MHz):
+                    </label>
+                    <input 
+                        type="number" 
+                        id="refFreq" 
+                        min="87" 
+                        max="108" 
+                        step="0.1" 
+                        value="100.0" 
+                        required
+                    >
+                    <div class="form-note">FM broadcast band: 87-108 MHz</div>
+                </div>
+
+                <!-- Target Frequency -->
+                <div class="form-group">
+                    <label for="targetFreq">
+                        <i class="fas fa-bullseye"></i> Target Frequency (MHz):
+                    </label>
+                    <input 
+                        type="number" 
+                        id="targetFreq" 
+                        min="87" 
+                        max="108" 
+                        step="0.1" 
+                        value="93.8" 
+                        required
+                    >
+                    <div class="form-note">Frequency to be localized</div>
+                </div>
+
+                <!-- Number of Loops -->
+                <div class="form-group">
+                    <label for="numLoops">
+                        <i class="fas fa-sync"></i> Number of Loops:
+                    </label>
+                    <input 
+                        type="number" 
+                        id="numLoops" 
+                        min="1" 
+                        max="100" 
+                        value="1" 
+                        required
+                    >
+                    <div class="form-note">Recording loops (1 loop = ~3 seconds)</div>
+                </div>
+
+                <!-- Synchronization Mode -->
+                <div class="form-group">
+                    <label><i class="fas fa-satellite"></i> Synchronization Mode:</label>
+                    <div class="form-radio">
+                        <label>
+                            <input type="radio" name="syncMode" value="ntp" checked>
+                            NTP (Internet) - ~1ms accuracy
+                        </label>
+                        <label>
+                            <input type="radio" name="syncMode" value="gps">
+                            GPS (Satellite) - nanosecond accuracy
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Status Display -->
+                <div id="statusDisplay" class="status-box">
+                    <!-- Status messages appear here -->
+                </div>
+
+                <!-- Progress -->
+                <div id="progressContainer" class="progress-section">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill">0%</div>
+                    </div>
+                    <div class="progress-text" id="progressText">Initializing...</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="button-group" style="margin-top: 20px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="closeRecordingDialog()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="startBtn" onclick="handleStartRecording()">
+                        <i class="fas fa-play"></i> Start Recording
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== TOAST NOTIFICATION ==================== -->
     <div id="toast" class="toast"></div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- ==================== FOOTER ==================== -->
+    <div class="footer">
+        <p>© 2024 TDOA Localization System. All rights reserved.</p>
+        <p>Current time: <span class="footer-time" id="footer-time">--:--:--</span></p>
+    </div>
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script>
+        // ==================== GLOBAL VARIABLES ====================
+        let currentSession = null;
+        let statusCheckInterval = null;
+        let recordingStartTime = null;
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Dashboard initialized');
+            
+            // Initialize dashboard
+            await initializeDashboard();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Update footer time
+            updateFooterTime();
+            setInterval(updateFooterTime, 1000);
+            
+            // Check system status
+            checkSystemStatus();
+        });
+
+        // ==================== INITIALIZATION FUNCTIONS ====================
+        async function initializeDashboard() {
+            try {
+                // Load receivers
+                const receiversResponse = await apiCall('/api/receivers');
+                if (receiversResponse && receiversResponse.length > 0) {
+                    document.getElementById('receiver-count').textContent = receiversResponse.length;
+                    updateReceiversList(receiversResponse);
+                    updateReceiverConfig(receiversResponse);
+                }
+
+                // Load status
+                const statusResponse = await apiCall('/api/status');
+                if (statusResponse) {
+                    updateSystemStatus(statusResponse);
+                }
+
+                // Check system mode
+                checkMockMode();
+
+            } catch (error) {
+                console.error('Dashboard initialization error:', error);
+                showToast('Failed to initialize dashboard', 'error');
+            }
+        }
+
+        function setupEventListeners() {
+            // Recording button
+            document.getElementById('recordBtn').addEventListener('click', openRecordingDialog);
+            
+            // Modal close button
+            document.querySelector('.modal .close').addEventListener('click', closeRecordingDialog);
+            
+            // Modal background click
+            document.getElementById('recordingModal').addEventListener('click', function(e) {
+                if (e.target === this) closeRecordingDialog();
+            });
+        }
+
+        // ==================== TAB SWITCHING ====================
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active from buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Mark button as active
+            event.target.classList.add('active');
+            
+            console.log('Switched to tab:', tabName);
+        }
+
+        // ==================== RECORDING FUNCTIONS ====================
+        function openRecordingDialog() {
+            document.getElementById('recordingModal').classList.add('show');
+        }
+
+        function closeRecordingDialog() {
+            document.getElementById('recordingModal').classList.remove('show');
+            document.getElementById('progressContainer').classList.remove('show');
+            document.getElementById('statusDisplay').classList.remove('show');
+        }
+
+        async function handleStartRecording() {
+            try {
+                const fref = parseFloat(document.getElementById('refFreq').value);
+                const fcari = parseFloat(document.getElementById('targetFreq').value);
+                const loops = parseInt(document.getElementById('numLoops').value);
+                const syncMode = document.querySelector('input[name="syncMode"]:checked').value;
+
+                // Validation
+                if (fref === fcari) {
+                    showToast('Frequencies must be different!', 'error');
+                    return;
+                }
+
+                if (loops < 1 || loops > 100) {
+                    showToast('Loops must be between 1 and 100', 'error');
+                    return;
+                }
+
+                console.log('Starting recording:', { fref, fcari, loops, syncMode });
+
+                // Disable button
+                document.getElementById('startBtn').disabled = true;
+
+                // Call API
+                const response = await apiCall('/api/recording/start', 'POST', {
+                    fref_mhz: fref,
+                    fcari_mhz: fcari,
+                    loops: loops,
+                    sync_mode: syncMode
+                });
+
+                if (!response || response.error) {
+                    showToast(`Error: ${response?.error || 'Unknown error'}`, 'error');
+                    document.getElementById('startBtn').disabled = false;
+                    return;
+                }
+
+                currentSession = response.session_id;
+                recordingStartTime = Date.now();
+
+                console.log('Session started:', currentSession);
+
+                // Show progress
+                document.getElementById('progressContainer').classList.add('show');
+                showStatus(`Recording started with session ID: ${currentSession}`, 'info');
+
+                // Start checking status
+                checkRecordingStatus();
+
+            } catch (error) {
+                console.error('Recording start error:', error);
+                showToast(`Error: ${error.message}`, 'error');
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        async function checkRecordingStatus() {
+            if (!currentSession) return;
+
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    const response = await apiCall(`/api/recording/status/${currentSession}`);
+
+                    if (!response) {
+                        console.log('No response from status check');
+                        return;
+                    }
+
+                    updateProgress(response);
+
+                    // Check if complete
+                    if (response.status === 'COMPLETE') {
+                        clearInterval(statusCheckInterval);
+                        document.getElementById('startBtn').disabled = false;
+                        showToast('Recording completed successfully!', 'success');
+                        
+                        setTimeout(() => {
+                            closeRecordingDialog();
+                            location.reload();
+                        }, 2000);
+                    }
+
+                    // Check for errors
+                    if (response.status === 'ERROR') {
+                        clearInterval(statusCheckInterval);
+                        document.getElementById('startBtn').disabled = false;
+                        showToast(`Recording error: ${response.error}`, 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Status check error:', error);
+                }
+
+            }, 1000); // Check every second
+        }
+
+        function updateProgress(status) {
+            const progress = status.progress || 0;
+            const currentLoop = status.current_loop || 0;
+            const totalLoops = status.total_loops || 1;
+
+            // Update progress bar
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = `${progress}%`;
+            progressFill.textContent = `${progress}%`;
+
+            // Update progress text
+            const progressText = document.getElementById('progressText');
+            progressText.textContent = `${status.status || 'Processing...'} - Loop ${currentLoop}/${totalLoops}`;
+
+            // Update status display
+            if (recordingStartTime) {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const statusMsg = `Status: ${status.status}\nLoop: ${currentLoop}/${totalLoops}\nProgress: ${progress}%\nElapsed: ${formatTime(elapsed)}s`;
+                showStatus(statusMsg, 'info');
+            }
+        }
+
+        // ==================== API FUNCTIONS ====================
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`http://localhost:5000${endpoint}`, options);
+
+                if (!response.ok) {
+                    console.error(`API Error: ${response.status}`, response.statusText);
+                    return null;
+                }
+
+                const result = await response.json();
+                return result;
+
+            } catch (error) {
+                console.error('API call error:', error);
+                return null;
+            }
+        }
+
+        // ==================== UI UPDATE FUNCTIONS ====================
+        function updateReceiversList(receivers) {
+            const list = document.getElementById('receiver-status-list');
+            if (!receivers || receivers.length === 0) {
+                list.innerHTML = '<p style="color: #999;">No receivers available</p>';
+                return;
+            }
+
+            list.innerHTML = receivers.map(rx => `
+                <div class="receiver-item">
+                    <strong>${rx.name || `Receiver ${rx.id}`}</strong>
+                    <span>Host: ${rx.hostname || 'N/A'}</span>
+                    <span>Location: ${rx.latitude?.toFixed(4) || 'N/A'}, ${rx.longitude?.toFixed(4) || 'N/A'}</span>
+                    <span>Status: <span class="status-badge success">Online</span></span>
+                </div>
+            `).join('');
+        }
+
+        function updateReceiverConfig(receivers) {
+            const list = document.getElementById('receiver-config-list');
+            if (!receivers || receivers.length === 0) {
+                list.innerHTML = '<p style="color: #999;">No receivers configured</p>';
+                return;
+            }
+
+            list.innerHTML = receivers.map(rx => `
+                <div class="info-group">
+                    <label>${rx.name || `Receiver ${rx.id}`}:</label>
+                    <span>IP: ${rx.hostname || 'N/A'} | Coords: (${rx.latitude?.toFixed(4)}, ${rx.longitude?.toFixed(4)}, ${rx.altitude || 0}m)</span>
+                </div>
+            `).join('');
+        }
+
+        function updateSystemStatus(status) {
+            if (status.environment === 'mock') {
+                document.getElementById('app-env').textContent = '🎭 Mock Mode (Testing)';
+                document.getElementById('app-env').style.color = '#ff6b6b';
+            } else {
+                document.getElementById('app-env').textContent = '📡 Real Mode';
+                document.getElementById('app-env').style.color = '#51cf66';
+            }
+        }
+
+        async function checkMockMode() {
+            const status = await apiCall('/api/status');
+            const indicator = document.getElementById('mock-mode-indicator');
+
+            if (status && status.environment === 'mock') {
+                indicator.innerHTML = '🎭 <strong>MOCK MODE (Testing)</strong> - Hardware not detected';
+                indicator.style.color = '#ff6b6b';
+            } else {
+                indicator.innerHTML = '📡 <strong>REAL MODE</strong> - Hardware connected';
+                indicator.style.color = '#51cf66';
+            }
+        }
+
+        function checkSystemStatus() {
+            // Placeholder for system status checking
+            console.log('System status: Running');
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusDisplay');
+            statusBox.className = `status-box ${type}`;
+            statusBox.textContent = message;
+            statusBox.classList.add('show');
+        }
+
+        function updateFooterTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('id-ID');
+            document.getElementById('footer-time').textContent = timeString;
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+    </script>
 </body>
 </html>

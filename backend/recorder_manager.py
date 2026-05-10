@@ -8,9 +8,10 @@ import scp
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-from loguru import logger
+from loguru import logger  # ✅ ADD THIS
 import json
 from dataclasses import dataclass
+
 
 @dataclass
 class ReceiverConfig:
@@ -189,39 +190,34 @@ class RecorderManager:
             return (1, "", str(e))
     
     def start_recording(self, receiver_id: str,
-                       duration_seconds: int = 60,
-                       frequency_mhz: float = 100.0,
-                       gain_db: int = 20,
-                       output_filename: str = None) -> bool:
+                       fref_mhz: float = 100.0,  # ✅ FIXED INDENTATION
+                       fcari_mhz: float = 93.8,
+                       loops: int = 1) -> bool:
         """
         Start recording on a receiver using pewaktu_new
         
         Args:
             receiver_id: ID of receiver
-            duration_seconds: Recording duration
-            frequency_mhz: Frequency to record
-            gain_db: Gain in dB
-            output_filename: Name of output file
+            fref_mhz: Reference frequency in MHz
+            fcari_mhz: Target frequency in MHz
+            loops: Number of recording loops
             
         Returns:
             True if recording started successfully
         """
         try:
-            if output_filename is None:
-                output_filename = f"recording_{int(time.time())}.dat"
+            remote_output_dir = "/home/pi/recorded_data"
             
-            remote_output_path = f"/home/pi/recorded_data/{output_filename}"
-            
-            # Command to run pewaktu_new
+            # Build command sesuai spesifikasi penelitian
             command = (
                 f"/home/pi/pewaktu_new "
-                f"-t {duration_seconds} "
-                f"-f {frequency_mhz}e6 "
-                f"-g {gain_db} "
-                f"-o {remote_output_path}"
+                f"--fref {fref_mhz*1e6:.0f} "
+                f"--fcari {fcari_mhz*1e6:.0f} "
+                f"--loop {loops}"
             )
             
-            logger.info(f"Starting recording on {receiver_id}: {output_filename}")
+            logger.info(f"Starting recording on {receiver_id}")
+            logger.info(f"  Freq: {fref_mhz}/{fcari_mhz} MHz, Loops: {loops}")
             logger.debug(f"Command: {command}")
             
             exit_code, stdout, stderr = self.execute_command(receiver_id, command)
@@ -238,14 +234,14 @@ class RecorderManager:
             return False
     
     def wait_for_recording(self, receiver_id: str,
-                          duration_seconds: int,
-                          check_interval: int = 5) -> bool:
+                          estimated_duration: int = 12,
+                          check_interval: int = 2) -> bool:
         """
         Wait for recording to complete on receiver
         
         Args:
             receiver_id: ID of receiver
-            duration_seconds: Expected duration
+            estimated_duration: Expected duration in seconds
             check_interval: Interval to check status
             
         Returns:
@@ -253,7 +249,7 @@ class RecorderManager:
         """
         try:
             elapsed = 0
-            expected_duration = duration_seconds + 10  # Add buffer
+            expected_duration = estimated_duration + 5  # Add buffer
             
             while elapsed < expected_duration:
                 # Check if pewaktu_new process is still running
@@ -382,7 +378,7 @@ class RecorderManager:
         except Exception as e:
             logger.error(f"Error disconnecting from {receiver_id}: {str(e)}")
     
-    def disconnect_all(self) -> None:
+    def disconnect_all(self) -> None:  # ✅ FIXED INDENTATION
         """Disconnect from all receivers"""
         receiver_ids = list(self.ssh_clients.keys())
         

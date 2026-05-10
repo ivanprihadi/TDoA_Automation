@@ -180,9 +180,9 @@ class AutomationOrchestrator:
             logger.info("READ IQ DATA FILES")
             
             # Read signals
-            signal1 = self.signal_processor.read_iq_file(file1)
-            signal2 = self.signal_processor.read_iq_file(file2)
-            signal3 = self.signal_processor.read_iq_file(file3)
+            signal1 = self.signal_processor.read_file_iq(file1)
+            signal2 = self.signal_processor.read_file_iq(file2)
+            signal3 = self.signal_processor.read_file_iq(file3)
             
             # Verify lengths
             if len(signal1) != self.NUM_SAMPLES_TOTAL:

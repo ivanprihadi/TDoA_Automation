@@ -6,6 +6,16 @@
     "version": "1.0.0",
     "environment": "production"
   },
+
+   "recording": {
+        "default_fref_mhz": 100.0,
+        "default_fcari_mhz": 93.8,
+        "default_loops": 1,
+        "default_sync_mode": "ntp",
+        "remote_script_path": "/home/pi/pewaktu_new",
+        "remote_data_dir": "/home/pi/recorded_data"
+    },
+
   "network": {
     "receivers": [
       {

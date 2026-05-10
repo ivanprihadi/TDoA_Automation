@@ -1,12 +1,10 @@
 """Configuration Manager for TDOA System"""
 
 import json
-import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Optional, List
-
-logger = logging.getLogger(__name__)
+from loguru import logger  # ✅ ADD THIS
 
 
 @dataclass

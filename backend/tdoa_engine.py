@@ -273,18 +273,18 @@ class TDOAEngine:
             # ==================== FILTER SIGNALS ====================
             logger.info("Filtering signals...")
             
-            signal12_filtered = self.signal_processor.filter_iq_signal(signal12, self.signal_bandwidth_khz)
-            signal22_filtered = self.signal_processor.filter_iq_signal(signal22, self.signal_bandwidth_khz)
-            signal11_filtered = self.signal_processor.filter_iq_signal(signal11, self.ref_bandwidth_khz)
-            signal13_filtered = self.signal_processor.filter_iq_signal(signal13, self.ref_bandwidth_khz)
-            signal21_filtered = self.signal_processor.filter_iq_signal(signal21, self.ref_bandwidth_khz)
-            signal23_filtered = self.signal_processor.filter_iq_signal(signal23, self.ref_bandwidth_khz)
+            signal12_filtered = self.signal_processor.filter_iq(signal12, self.signal_bandwidth_khz)
+            signal22_filtered = self.signal_processor.filter_iq(signal22, self.signal_bandwidth_khz)
+            signal11_filtered = self.signal_processor.filter_iq(signal11, self.ref_bandwidth_khz)
+            signal13_filtered = self.signal_processor.filter_iq(signal13, self.ref_bandwidth_khz)
+            signal21_filtered = self.signal_processor.filter_iq(signal21, self.ref_bandwidth_khz)
+            signal23_filtered = self.signal_processor.filter_iq(signal23, self.ref_bandwidth_khz)
             
             # ==================== CORRELATE SLICE 1 (Reference) ====================
             logger.info("-" * 80)
             logger.info("SLICE 1 CORRELATION (Reference)")
             
-            corr_signal_1 = self.signal_processor.correlate_iq_signals(
+            corr_signal_1 = self.signal_processor.correlate_iq(
                 signal11_filtered, signal21_filtered,
                 corr_type=self.corr_type,
                 smoothing_factor=self.smoothing_factor_ref
@@ -292,7 +292,7 @@ class TDOAEngine:
             
             delay1_idx = np.argmax(corr_signal_1)
             delay1 = delay1_idx - len(signal11)
-            reliability1 = self.signal_processor.calculate_correlation_reliability(corr_signal_1)
+            reliability1 = self.signal_processor.corr_reliability(corr_signal_1)
             
             logger.info(f"  Delay: {delay1} samples")
             logger.info(f"  Reliability: {reliability1:.4f}")
@@ -306,7 +306,7 @@ class TDOAEngine:
             
             logger.debug(f"  Valid sample range: {int(valid_samples_left)} to {int(valid_samples_right)}")
             
-            corr_signal_2 = self.signal_processor.correlate_iq_signals(
+            corr_signal_2 = self.signal_processor.correlate_iq(
                 signal12_filtered, signal22_filtered,
                 corr_type=self.corr_type,
                 smoothing_factor=self.smoothing_factor
@@ -322,7 +322,7 @@ class TDOAEngine:
             
             delay2_idx = np.argmax(corr_signal_2_valid)
             delay2 = delay2_idx - len(signal12)
-            reliability2 = self.signal_processor.calculate_correlation_reliability(corr_signal_2_valid)
+            reliability2 = self.signal_processor.corr_reliability(corr_signal_2_valid)
             
             logger.info(f"  Delay: {delay2} samples")
             logger.info(f"  Reliability: {reliability2:.4f}")
@@ -331,7 +331,7 @@ class TDOAEngine:
             logger.info("-" * 80)
             logger.info("SLICE 3 CORRELATION (Reference Check)")
             
-            corr_signal_3 = self.signal_processor.correlate_iq_signals(
+            corr_signal_3 = self.signal_processor.correlate_iq(
                 signal13_filtered, signal23_filtered,
                 corr_type=self.corr_type,
                 smoothing_factor=self.smoothing_factor_ref
@@ -339,7 +339,7 @@ class TDOAEngine:
             
             delay3_idx = np.argmax(corr_signal_3)
             delay3 = delay3_idx - len(signal13)
-            reliability3 = self.signal_processor.calculate_correlation_reliability(corr_signal_3)
+            reliability3 = self.signal_processor.corr_reliability(corr_signal_3)
             
             logger.info(f"  Delay: {delay3} samples")
             logger.info(f"  Reliability: {reliability3:.4f}")
