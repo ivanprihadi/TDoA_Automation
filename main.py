@@ -11,6 +11,8 @@ import json
 from datetime import datetime
 import os
 import sys
+from werkzeug.utils import secure_filename
+import shutil
 
 # ==================== IMPORT BACKEND MODULES ====================
 try:
@@ -606,6 +608,266 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
+
+
+# ==================== IMPORT DATA PROCESSOR ====================
+from backend.data_processor import DataProcessor
+
+# Initialize data processor
+data_processor = DataProcessor('./output/processed_data')
+logger.info("✓ DataProcessor initialized")
+
+# ==================== API ROUTES - RECORDED DATA ====================
+
+@app.route('/api/recorded-files', methods=['GET'])
+def api_get_recorded_files():
+    """Get list of recorded files from output/recorded_data"""
+    try:
+        logger.debug("GET /api/recorded-files")
+        
+        files = []
+        data_dir = Path('./output/recorded_data')
+        
+        if data_dir.exists():
+            for f in data_dir.glob('*'):
+                if f.is_file():
+                    files.append({
+                        'name': f.name,
+                        'size_bytes': f.stat().st_size,
+                        'created_at': datetime.fromtimestamp(f.stat().st_ctime).isoformat()
+                    })
+        
+        return jsonify({
+            'status': 'success',
+            'files': sorted(files, key=lambda x: x['created_at'], reverse=True),
+            'count': len(files)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting recorded files: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+# ==================== API ROUTES - DATA IMPORT & PROCESSING ====================
+
+@app.route('/import-data')
+def import_data_page():
+    """Import data page"""
+    logger.debug("GET /import-data")
+    return render_template('import_data.html')
+
+@app.route('/api/import-file', methods=['POST'])
+def api_import_file():
+    """
+    Import raw IQ file untuk processing
+    
+    POST /api/import-file
+    Content-Type: multipart/form-data
+    """
+    try:
+        logger.info("📥 POST /api/import-file - File upload received")
+        
+        if not data_processor:
+            return jsonify({'error': 'Data processor not available'}), 503
+        
+        if 'file' not in request.files:
+            logger.error("❌ No file provided")
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        sample_rate = float(request.form.get('sample_rate', 2.4e6))
+        
+        # Create upload directory
+        upload_dir = Path('./input/uploaded_data')
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save file
+        filename = secure_filename(file.filename)
+        filepath = upload_dir / filename
+        file.save(str(filepath))
+        
+        logger.info(f"✓ File saved: {filename}")
+        
+        # Import file
+        result = data_processor.import_file(str(filepath), sample_rate)
+        
+        if 'error' in result:
+            return jsonify(result), 400
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        error_msg = f"Error importing file: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/process-file/<file_id>', methods=['GET'])
+def api_process_file(file_id):
+    """
+    Process a loaded IQ file
+    
+    GET /api/process-file/{file_id}?ref_freq={ref_freq_mhz}
+    
+    Query Parameters:
+    - ref_freq: Reference frequency in MHz (required)
+    
+    Response (200 OK):
+    {
+        "file_id": "1000_933_2024",
+        "filename": "1000_933_2024_5_18_11_16.dat",
+        "status": "processed",
+        "statistics": {...},
+        "frequency_detection": {...},
+        "spectrum_file": "..."
+    }
+    """
+    try:
+        logger.info(f"🔄 GET /api/process-file/{file_id}")
+        
+        # Get reference frequency
+        ref_freq = request.args.get('ref_freq', type=float)
+        
+        if ref_freq is None:
+            return jsonify({'error': 'ref_freq parameter required'}), 400
+        
+        if not (87 <= ref_freq <= 108):
+            return jsonify({'error': 'Reference frequency out of range (87-108 MHz)'}), 400
+        
+        # Process file
+        result = data_processor.process_file(file_id, ref_freq)
+        
+        if 'error' in result:
+            return jsonify(result), 400
+        
+        logger.info(f"✓ File processed: {file_id}")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        error_msg = f"Error processing file: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/imported-files', methods=['GET'])
+def api_get_imported_files():
+    """Get list of imported files"""
+    try:
+        logger.debug("GET /api/imported-files")
+        
+        files = data_processor.get_imported_files()
+        
+        return jsonify({'files': files}), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting imported files: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-file/<file_id>', methods=['DELETE'])
+def api_delete_file(file_id):
+    """Delete an imported file"""
+    try:
+        logger.info(f"DELETE /api/delete-file/{file_id}")
+        
+        result = data_processor.delete_file(file_id)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting file: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/process-multiple-files', methods=['POST'])
+def api_process_multiple_files():
+    """
+    Process multiple files for TDOA calculation
+    
+    POST /api/process-multiple-files
+    Content-Type: application/json
+    
+    Request Body:
+    {
+        "file_ids": ["file1_id", "file2_id", "file3_id"],
+        "ref_freq_mhz": 100.0
+    }
+    
+    Response (200 OK):
+    {
+        "session_id": "tdoa_20240518_153045",
+        "status": "completed",
+        "processed_files": 3,
+        "results": [...]
+    }
+    """
+    try:
+        logger.info("🔄 POST /api/process-multiple-files")
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body must be JSON'}), 400
+        
+        file_ids = data.get('file_ids', [])
+        ref_freq = data.get('ref_freq_mhz')
+        
+        if not file_ids or len(file_ids) < 2:
+            return jsonify({'error': 'At least 2 files required'}), 400
+        
+        if ref_freq is None or not (87 <= ref_freq <= 108):
+            return jsonify({'error': 'Valid reference frequency required (87-108 MHz)'}), 400
+        
+        # Process multiple files
+        result = data_processor.process_multiple_files(file_ids, ref_freq)
+        
+        if 'error' in result:
+            return jsonify(result), 400
+        
+        logger.info(f"✓ TDOA processing completed")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        error_msg = f"Error processing files: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/spectrum/<file_id>')
+def api_get_spectrum(file_id):
+    """
+    Get spectrum data for visualization
+    
+    GET /api/spectrum/{file_id}
+    
+    Response (200 OK):
+    {
+        "file_id": "1000_933_2024",
+        "frequencies_mhz": [...],
+        "power_db": [...]
+    }
+    """
+    try:
+        logger.debug(f"GET /api/spectrum/{file_id}")
+        
+        if file_id not in data_processor.files:
+            return jsonify({'error': 'File not found'}), 404
+        
+        iq_file = data_processor.files[file_id]
+        
+        if not iq_file.loaded:
+            return jsonify({'error': 'File not loaded'}), 400
+        
+        freq, spectrum = iq_file.get_spectrum(nfft=4096)
+        
+        if freq is None or spectrum is None:
+            return jsonify({'error': 'Failed to calculate spectrum'}), 500
+        
+        return jsonify({
+            'file_id': file_id,
+            'frequencies_mhz': (freq / 1e6).tolist(),
+            'power_db': spectrum.tolist()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting spectrum: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 # ==================== MAIN ====================
 

@@ -152,6 +152,9 @@ async function loadTabData(tabName) {
         case 'dashboard':
             await refreshSystemData();
             break;
+        case 'import-data':              
+            await loadImportedFiles();   
+            break;
         case 'processing':
             await loadProcessingData();
             break;

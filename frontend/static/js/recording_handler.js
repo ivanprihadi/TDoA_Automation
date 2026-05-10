@@ -143,22 +143,17 @@ class RecordingDialog {
             this.showStatus('❌ Reference frequency must be between 87-108 MHz', 'error');
             return;
         }
-        
-        if (!Validators.isFrequency(targetFreq)) {
+
+        // DENGAN ini:
+        if (!Validators.isFrequency(refFreq) || refFreq < 87 || refFreq > 108) {
+            console.error('❌ Invalid reference frequency');
+            this.showStatus('❌ Reference frequency must be between 87-108 MHz', 'error');
+            return;
+        }
+
+        if (!Validators.isFrequency(targetFreq) || targetFreq < 87 || targetFreq > 108) {
             console.error('❌ Invalid target frequency');
             this.showStatus('❌ Target frequency must be between 87-108 MHz', 'error');
-            return;
-        }
-        
-        if (refFreq === targetFreq) {
-            console.error('❌ Frequencies cannot be the same');
-            this.showStatus('❌ Reference and Target frequencies must be different', 'error');
-            return;
-        }
-        
-        if (!Validators.isPositive(numLoops) || numLoops > 100) {
-            console.error('❌ Invalid number of loops');
-            this.showStatus('❌ Loops must be between 1-100', 'error');
             return;
         }
         

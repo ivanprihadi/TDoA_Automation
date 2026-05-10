@@ -1,0 +1,596 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Raw IQ Data - TDOA System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .import-section {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .drop-zone {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: #764ba2;
+        }
+
+        .drop-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .file-list {
+            margin-top: 2rem;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.3rem;
+        }
+
+        .file-details {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-process {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-process:hover {
+            background: #5568d3;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-delete:hover {
+            background: #ff5252;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .status-alert.show {
+            display: block;
+        }
+
+        .status-alert.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #51cf66;
+        }
+
+        .status-alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .status-alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffd43b;
+        }
+
+        .processing-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .processing-dialog.show {
+            display: flex;
+        }
+
+        .processing-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .processing-progress {
+            margin: 2rem 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        <h1>
+            <i class="fas fa-database"></i>
+            Import Raw IQ Data
+        </h1>
+<!-- 
+        Upload Section -->
+        <div class="import-section">
+            <h2><i class="fas fa-upload"></i> Upload IQ Data Files</h2>
+            <p style="color: #666; margin-bottom: 1.5rem;">
+                Select .dat files containing raw IQ samples from your TDOA experiments
+            </p>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h3>Drag & Drop Files Here</h3>
+                <p style="color: #666; margin-bottom: 1rem;">or click to select files</p>
+                <input type="file" id="fileInput" multiple accept=".dat,.iq" style="display: none;">
+                <button class="btn-primary">
+                    <i class="fas fa-folder-open"></i> Select Files
+                </button>
+            </div>
+
+            <div id="statusAlert" class="status-alert"></div>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="import-section">
+            <h2><i class="fas fa-cog"></i> Processing Configuration</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <label for="sampleRate">Sample Rate (MSPS):</label>
+                    <input type="number" id="sampleRate" value="2.4" step="0.1" min="0.1">
+                    <small style="color: #999;">Default: 2.4 MSPS (RTL-SDR)</small>
+                </div>
+
+                <div>
+                    <label for="refFreq">Reference Frequency (MHz):</label>
+                    <input type="number" id="refFreq" value="100.0" step="0.1" min="87" max="108">
+                    <small style="color: #999;">FM band: 87-108 MHz</small>
+                </div>
+            </div>
+
+            <button class="btn-primary btn-lg" id="processBtn" disabled>
+                <i class="fas fa-play"></i> Process Selected Files
+            </button>
+        </div>
+
+        <!-- Imported Files List -->
+        <div class="import-section">
+            <h2><i class="fas fa-list"></i> Imported Files</h2>
+            
+            <div id="fileList" class="file-list">
+                <p style="color: #999; text-align: center; padding: 2rem;">
+                    No files imported yet
+                </p>
+            </div>
+        </div>
+
+        <!-- Processing Results -->
+        <div class="import-section" id="resultsSection" style="display: none;">
+            <h2><i class="fas fa-chart-line"></i> Processing Results</h2>
+            
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <!-- Processing Dialog -->
+    <div id="processingDialog" class="processing-dialog">
+        <div class="processing-content">
+            <h3><i class="fas fa-spinner fa-spin"></i> Processing Files...</h3>
+            <div class="processing-progress">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill">0%</div>
+                </div>
+            </div>
+            <p id="processingStatus" style="text-align: center; color: #666;"></p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script>
+        // ==================== STATE ====================
+        let uploadedFiles = [];
+        let importedFiles = [];
+
+        // ==================== DROP ZONE HANDLING ====================
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const files = Array.from(e.dataTransfer.files);
+            await handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            await handleFiles(files);
+        });
+
+        // ==================== FILE HANDLING ====================
+        async function handleFiles(files) {
+            for (const file of files) {
+                uploadedFiles.push(file);
+            }
+
+            showAlert(`${uploadedFiles.length} file(s) ready to upload`, 'warning');
+            updateFileList();
+            document.getElementById('processBtn').disabled = uploadedFiles.length === 0;
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (uploadedFiles.length === 0 && importedFiles.length === 0) {
+                fileList.innerHTML = `
+                    <p style="color: #999; text-align: center; padding: 2rem;">
+                        No files imported yet
+                    </p>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            // Show uploaded files
+            uploadedFiles.forEach((file, index) => {
+                html += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-details">
+                                Size: ${StringUtils.formatBytes(file.size)} | 
+                                Ready to import
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-delete" onclick="removeFile(${index})">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Show imported files
+            importedFiles.forEach(file => {
+                html += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.filename}</div>
+                            <div class="file-details">
+                                Samples: ${NumberUtils.formatNumber(file.num_samples)} | 
+                                Size: ${StringUtils.formatBytes(file.filesize)}
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-process" onclick="processFile('${file.file_id}')">
+                                <i class="fas fa-play"></i> Process
+                            </button>
+                            <button class="btn-delete" onclick="deleteFile('${file.file_id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            fileList.innerHTML = html;
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+            document.getElementById('processBtn').disabled = uploadedFiles.length === 0;
+        }
+
+        // ==================== IMPORT & PROCESS ====================
+        document.getElementById('processBtn').addEventListener('click', async () => {
+            if (uploadedFiles.length === 0) {
+                showAlert('No files selected', 'error');
+                return;
+            }
+
+            showProcessingDialog(true);
+
+            let importedCount = 0;
+            let totalCount = uploadedFiles.length;
+
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                
+                updateProcessingStatus(
+                    `Importing file ${i + 1}/${totalCount}: ${file.name}`,
+                    ((i + 1) / totalCount) * 100
+                );
+
+                await importFile(file);
+                importedCount++;
+            }
+
+            uploadedFiles = [];
+            updateFileList();
+
+            showProcessingDialog(false);
+            showAlert(`Successfully imported ${importedCount}/${totalCount} files`, 'success');
+        });
+
+        async function importFile(file) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('sample_rate', parseFloat(document.getElementById('sampleRate').value) * 1e6);
+
+                const response = await fetch('/api/import-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    importedFiles.push(result);
+                    console.log('✓ File imported:', result);
+                } else {
+                    console.error('❌ Import failed:', result.error);
+                    showAlert(`Failed to import ${file.name}: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Import error:', error);
+                showAlert(`Error importing ${file.name}`, 'error');
+            }
+        }
+
+        async function processFile(fileId) {
+            const refFreq = parseFloat(document.getElementById('refFreq').value);
+
+            showProcessingDialog(true);
+            updateProcessingStatus('Processing file...', 50);
+
+            try {
+                const response = await fetch(`/api/process-file/${fileId}?ref_freq=${refFreq}`, {
+                    method: 'GET'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showProcessingDialog(false);
+                    showAlert('File processed successfully!', 'success');
+                    displayResults([result]);
+                } else {
+                    showProcessingDialog(false);
+                    showAlert(`Processing failed: ${result.error}`, 'error');
+                }
+
+            } catch (error) {
+                showProcessingDialog(false);
+                console.error('Processing error:', error);
+                showAlert('Error processing file', 'error');
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Delete this file?')) return;
+
+            try {
+                const response = await fetch(`/api/delete-file/${fileId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    importedFiles = importedFiles.filter(f => f.file_id !== fileId);
+                    updateFileList();
+                    showAlert('File deleted', 'success');
+                }
+
+            } catch (error) {
+                console.error('Delete error:', error);
+                showAlert('Error deleting file', 'error');
+            }
+        }
+
+        function displayResults(results) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsList = document.getElementById('resultsList');
+
+            let html = '';
+
+            results.forEach(result => {
+                const stats = result.statistics || {};
+                const freqDetect = result.frequency_detection || {};
+
+                html += `
+                    <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f9f9f9; border-radius: 6px;">
+                        <h4>${result.filename}</h4>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Duration</div>
+                                <div class="stat-value">${(stats.duration_seconds || 0).toFixed(2)}s</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Samples</div>
+                                <div class="stat-value">${NumberUtils.formatNumber(stats.num_samples || 0)}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Mean Power</div>
+                                <div class="stat-value">${(stats.mean_power_db || 0).toFixed(1)}dB</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Peak Power</div>
+                                <div class="stat-value">${(stats.peak_power_db || 0).toFixed(1)}dB</div>
+                            </div>
+                        </div>
+
+                        ${freqDetect && freqDetect.target_mhz ? `
+                            <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 4px;">
+                                <strong>Frequency Detection:</strong><br>
+                                Target: ${freqDetect.target_mhz.toFixed(3)} MHz<br>
+                                Offset: ${freqDetect.offset_hz.toFixed(1)} Hz<br>
+                                Power: ${freqDetect.power_db.toFixed(1)} dB
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            resultsList.innerHTML = html;
+            resultsSection.style.display = 'block';
+        }
+
+        // ==================== UI HELPERS ====================
+        function showAlert(message, type) {
+            const alert = document.getElementById('statusAlert');
+            alert.className = `status-alert ${type} show`;
+            alert.textContent = message;
+
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        function showProcessingDialog(show) {
+            document.getElementById('processingDialog').classList.toggle('show', show);
+        }
+
+        function updateProcessingStatus(message, progress) {
+            document.getElementById('processingStatus').textContent = message;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressFill').textContent = `${Math.round(progress)}%`;
+        }
+
+        // Load imported files on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/imported-files');
+                const result = await response.json();
+                
+                if (result.files) {
+                    importedFiles = result.files;
+                    updateFileList();
+                }
+            } catch (error) {
+                console.error('Error loading imported files:', error);
+            }
+        });
+    </script>
+</body>
+</html>
+<!--

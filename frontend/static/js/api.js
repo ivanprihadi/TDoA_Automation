@@ -165,6 +165,67 @@ const API = {
         return this.get(`/api/recording/status/${sessionId}`);
     },
 
+    // ==================== TAMBAH DI SINI ====================
+/**
+ * Get list of recorded files from output/recorded_data
+ */
+async getRecordedFiles() {
+    return this.get('/api/recorded-files');
+},
+
+/**
+ * Get list of imported files 
+ */
+async getImportedFiles() {
+    return this.get('/api/imported-files');
+},
+
+/**
+ * Import raw IQ file untuk processing
+ */
+async importFile(file, sampleRate = 2.4e6) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('sample_rate', sampleRate);
+    
+    return this.request('/api/import-file', {
+        method: 'POST',
+        body: formData,
+        headers: {} // FormData akan set header otomatis
+    });
+},
+
+/**
+ * Process file dengan TDOA calculation
+ */
+async processFile(fileId, refFreq) {
+    return this.get(`/api/process-file/${fileId}?ref_freq=${refFreq}`);
+},
+
+/**
+ * Process multiple files untuk TDOA
+ */
+async processMultipleFiles(fileIds, refFreq) {
+    return this.post('/api/process-multiple-files', {
+        file_ids: fileIds,
+        ref_freq_mhz: refFreq
+    });
+},
+
+/**
+ * Get spectrum visualization data
+ */
+async getSpectrum(fileId) {
+    return this.get(`/api/spectrum/${fileId}`);
+},
+
+/**
+ * Delete imported file
+ */
+async deleteFile(fileId) {
+    return this.request(`/api/delete-file/${fileId}`, { method: 'DELETE' });
+},
+
     /**
      * Cancel recording
      */
@@ -187,6 +248,38 @@ const API = {
      */
     async getProcessingStatus(sessionId) {
         return this.get(`/api/processing/status/${sessionId}`);
+    },
+
+    /**
+     * Process multiple files untuk TDOA
+     */
+    async processMultipleFiles(fileIds, refFreq, targetFreq) {
+        return this.post('/api/process-multiple-files', {
+            file_ids: fileIds,
+            ref_freq_mhz: refFreq,
+            target_freq_mhz: targetFreq
+        });
+    },
+
+    /**
+     * Get imported files
+     */
+    async getImportedFiles() {
+        return this.get('/api/imported-files');
+    },
+
+    /**
+     * Delete file
+     */
+    async deleteFile(fileId) {
+        return this.request(`/api/delete-file/${fileId}`, { method: 'DELETE' });
+    },
+
+    /**
+     * Get processing status
+     */
+    async getProcessingStatus(jobId) {
+        return this.get(`/api/processing/status/${jobId}`);
     }
 };
 
