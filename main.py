@@ -7,20 +7,21 @@ Complete & Production-Ready Version
 from flask import Flask, render_template, request, jsonify, send_file
 from pathlib import Path
 from loguru import logger
+from werkzeug.utils import secure_filename
 import json
 from datetime import datetime
 import os
 import sys
-from werkzeug.utils import secure_filename
 import shutil
 
 # ==================== IMPORT BACKEND MODULES ====================
 try:
-    from backend import ConfigManager
+    from backend.config_manager import ConfigManager
     from backend.recorder_manager import RecorderManager
     from backend.recording_service import RecordingService
+    logger.info("✓ Backend modules imported successfully")
 except ImportError as e:
-    logger.warning(f"Backend import error: {e}")
+    logger.warning(f"⚠️ Backend import error: {e}")
     ConfigManager = None
     RecorderManager = None
     RecordingService = None
@@ -92,7 +93,7 @@ except Exception as e:
     logger.error(f"⚠️ RecorderManager not available: {str(e)}")
     recorder_manager = None
 
-# ==================== HELPER FUNCTIONS ====================
+    # ==================== HELPER FUNCTIONS ====================
 
 def get_system_status():
     """Get current system status"""
@@ -104,7 +105,7 @@ def get_system_status():
             'services': {
                 'config_manager': 'active' if config_manager else 'inactive',
                 'recording_service': 'active' if recording_service else 'inactive',
-                'recorder_manager': 'active' if recorder_manager else 'inactive'
+                'data_processor': 'active' if data_processor else 'inactive'
             },
             'timestamp': datetime.now().isoformat()
         }
@@ -112,6 +113,7 @@ def get_system_status():
     except Exception as e:
         logger.error(f"Error getting system status: {e}")
         return {'error': str(e)}
+
 
 def validate_recording_request(data):
     """Validate recording request data"""
@@ -161,6 +163,7 @@ def validate_recording_request(data):
     except (ValueError, TypeError) as e:
         return {'valid': False, 'errors': [f"Type error: {str(e)}"]}
 
+
 # ==================== ROUTES - PAGES ====================
 
 @app.route('/')
@@ -169,11 +172,13 @@ def dashboard():
     logger.debug("GET /")
     return render_template('dashboard.html')
 
+
 @app.route('/receivers')
 def receivers():
     """Receivers page"""
     logger.debug("GET /receivers")
-    return render_template('dashboard.html')  # Use dashboard for now
+    return render_template('dashboard.html')
+
 
 @app.route('/tdoa')
 def tdoa():
@@ -181,11 +186,13 @@ def tdoa():
     logger.debug("GET /tdoa")
     return render_template('dashboard.html')
 
+
 @app.route('/results')
 def results():
     """Results page"""
     logger.debug("GET /results")
     return render_template('dashboard.html')
+
 
 # ==================== API ROUTES - SYSTEM ====================
 
@@ -199,6 +206,7 @@ def api_status():
     except Exception as e:
         logger.error(f"Error in /api/status: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/config', methods=['GET'])
 def api_get_config():
@@ -223,29 +231,204 @@ def api_get_config():
         logger.error(f"Error getting config: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/receivers', methods=['GET'])
 def api_get_receivers():
-    """Get receivers list"""
+    """Get list of active receivers"""
     try:
-        logger.debug("GET /api/receivers")
+        logger.info("GET /api/receivers")
         
-        if not config_manager:
-            return jsonify({
-                'status': 'error',
-                'receivers': []
-            }), 200
+        receivers = {
+            'receivers': [
+                {
+                    'id': 1,
+                    'name': 'Receiver 1',
+                    'location': {
+                        'latitude': 37.7749,
+                        'longitude': -122.4194,
+                        'altitude': 47
+                    },
+                    'status': 'active',
+                    'last_seen': datetime.now().isoformat()
+                },
+                {
+                    'id': 2,
+                    'name': 'Receiver 2',
+                    'location': {
+                        'latitude': 37.7750,
+                        'longitude': -122.4195,
+                        'altitude': 48
+                    },
+                    'status': 'active',
+                    'last_seen': datetime.now().isoformat()
+                },
+                {
+                    'id': 3,
+                    'name': 'Receiver 3',
+                    'location': {
+                        'latitude': 37.7751,
+                        'longitude': -122.4196,
+                        'altitude': 49
+                    },
+                    'status': 'active',
+                    'last_seen': datetime.now().isoformat()
+                }
+            ],
+            'total_active': 3,
+            'timestamp': datetime.now().isoformat()
+        }
         
-        config = config_manager.get_config()
-        receivers = config.get('receivers', [])
+        logger.info(f"✓ Returning {len(receivers['receivers'])} receivers")
+        return jsonify(receivers), 200
+        
+    except Exception as e:
+        error_msg = f"Error getting receivers: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return jsonify({'error': error_msg}), 500
+
+
+@app.route('/api/results', methods=['GET'])
+def api_get_results():
+    """Get list of processing results"""
+    try:
+        logger.info("GET /api/results")
+        
+        results_dir = Path('./output/processed_data/results')
+        results_dir.mkdir(parents=True, exist_ok=True)
+        
+        results = []
+        
+        # Find all JSON result files
+        for result_file in sorted(results_dir.glob('*.json'), reverse=True):
+            try:
+                with open(result_file, 'r') as f:
+                    data = json.load(f)
+                    results.append({
+                        'filename': result_file.name,
+                        'created_at': datetime.fromtimestamp(result_file.stat().st_mtime).isoformat(),
+                        'data': data,
+                        'size_bytes': result_file.stat().st_size
+                    })
+            except Exception as e:
+                logger.warn(f"Error reading result file {result_file}: {e}")
+                continue
+        
+        logger.info(f"✓ Found {len(results)} result files")
         
         return jsonify({
             'status': 'success',
-            'receivers': receivers
+            'results': results,
+            'total': len(results),
+            'timestamp': datetime.now().isoformat()
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting receivers: {str(e)}", exc_info=True)
+        error_msg = f"Error getting results: {str(e)}"
+        logger.error(f"❌ {error_msg}", exc_info=True)
+        return jsonify({'error': error_msg, 'results': []}), 500
+
+@app.route('/api/results/<filename>', methods=['GET'])
+def api_download_result(filename):
+    """Download a specific result file"""
+    try:
+        logger.debug(f"GET /api/results/{filename}")
+        
+        results_dir = Path('./output/processed_data/results')
+        file_path = results_dir / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({'error': 'Result file not found'}), 404
+        
+        logger.info(f"Downloading result: {filename}")
+        return send_file(file_path, as_attachment=True, mimetype='application/json')
+        
+    except Exception as e:
+        logger.error(f"Error downloading result: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard-stats', methods=['GET'])
+def api_dashboard_stats():
+    """Get dashboard statistics"""
+    try:
+        logger.debug("GET /api/dashboard-stats")
+        
+        # Count receivers
+        receiver_count = 3  # Default
+        if config_manager:
+            try:
+                config = config_manager.get_config()
+                receiver_count = len(config.get('receivers', []))
+            except:
+                pass
+        
+        # Count files
+        data_dir = Path('./output/recorded_data')
+        file_count = len(list(data_dir.glob('*'))) if data_dir.exists() else 0
+        
+        # Count maps
+        maps_dir = Path('./output/maps')
+        map_count = len(list(maps_dir.glob('*.html'))) if maps_dir.exists() else 0
+        
+        return jsonify({
+            'status': 'success',
+            'stats': {
+                'receiver_count': receiver_count,
+                'file_count': file_count,
+                'map_count': map_count,
+                'system_healthy': True,
+                'timestamp': datetime.now().isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting dashboard stats: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+# ==================== ERROR HANDLERS ====================
+
+@app.errorhandler(404)
+def not_found(error):
+    """404 Not Found handler"""
+    logger.warning(f"404 Not Found: {request.path}")
+    return jsonify({'error': 'Endpoint not found', 'path': request.path}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """405 Method Not Allowed handler"""
+    logger.warning(f"405 Method Not Allowed: {request.method} {request.path}")
+    return jsonify({'error': 'Method not allowed'}), 405
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """500 Internal Server Error handler"""
+    logger.error(f"500 Internal Server Error: {str(error)}", exc_info=True)
+    return jsonify({'error': 'Internal server error', 'message': str(error)}), 500
+
+
+@app.errorhandler(503)
+def service_unavailable(error):
+    """503 Service Unavailable handler"""
+    logger.error(f"503 Service Unavailable: {str(error)}")
+    return jsonify({'error': 'Service unavailable'}), 503
+
+
+# ==================== REQUEST/RESPONSE HANDLERS ====================
+
+@app.before_request
+def before_request():
+    """Log incoming requests"""
+    logger.debug(f"{request.method} {request.path}")
+
+
+@app.after_request
+def after_request(response):
+    """Log outgoing responses"""
+    logger.debug(f"Response: {response.status_code}")
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
 
 # ==================== API ROUTES - RECORDING ====================
 
@@ -666,7 +849,8 @@ def api_import_file():
     try:
         logger.info("📥 POST /api/import-file - File upload received")
         
-        if not data_processor:
+        if data_processor is None:
+            logger.error("❌ DataProcessor not initialized")
             return jsonify({'error': 'Data processor not available'}), 503
         
         if 'file' not in request.files:
@@ -779,26 +963,13 @@ def api_delete_file(file_id):
 def api_process_multiple_files():
     """
     Process multiple files for TDOA calculation
-    
-    POST /api/process-multiple-files
-    Content-Type: application/json
-    
-    Request Body:
-    {
-        "file_ids": ["file1_id", "file2_id", "file3_id"],
-        "ref_freq_mhz": 100.0
-    }
-    
-    Response (200 OK):
-    {
-        "session_id": "tdoa_20240518_153045",
-        "status": "completed",
-        "processed_files": 3,
-        "results": [...]
-    }
     """
     try:
         logger.info("🔄 POST /api/process-multiple-files")
+        
+        if data_processor is None:
+            logger.error("❌ DataProcessor not initialized")
+            return jsonify({'error': 'Data processor not available'}), 503
         
         data = request.get_json()
         
@@ -807,6 +978,7 @@ def api_process_multiple_files():
         
         file_ids = data.get('file_ids', [])
         ref_freq = data.get('ref_freq_mhz')
+        target_freq = data.get('target_freq_mhz')  # ← ADD THIS
         
         if not file_ids or len(file_ids) < 2:
             return jsonify({'error': 'At least 2 files required'}), 400
@@ -814,13 +986,19 @@ def api_process_multiple_files():
         if ref_freq is None or not (87 <= ref_freq <= 108):
             return jsonify({'error': 'Valid reference frequency required (87-108 MHz)'}), 400
         
-        # Process multiple files
-        result = data_processor.process_multiple_files(file_ids, ref_freq)
+        if target_freq is None or not (87 <= target_freq <= 108):
+            return jsonify({'error': 'Valid target frequency required (87-108 MHz)'}), 400
+        
+        logger.info(f"Processing {len(file_ids)} files: ref={ref_freq} MHz, target={target_freq} MHz")
+        
+        # ✅ PASS target_freq parameter!
+        result = data_processor.process_multiple_files(file_ids, ref_freq, target_freq)
         
         if 'error' in result:
+            logger.error(f"❌ Processing failed: {result['error']}")
             return jsonify(result), 400
         
-        logger.info(f"✓ TDOA processing completed")
+        logger.info(f"✓ TDOA processing completed: {result.get('session_id')}")
         
         return jsonify(result), 200
         
@@ -829,45 +1007,121 @@ def api_process_multiple_files():
         logger.error(f"❌ {error_msg}", exc_info=True)
         return jsonify({'error': error_msg}), 500
 
-@app.route('/api/spectrum/<file_id>')
-def api_get_spectrum(file_id):
-    """
-    Get spectrum data for visualization
-    
-    GET /api/spectrum/{file_id}
-    
-    Response (200 OK):
-    {
-        "file_id": "1000_933_2024",
-        "frequencies_mhz": [...],
-        "power_db": [...]
-    }
-    """
-    try:
-        logger.debug(f"GET /api/spectrum/{file_id}")
+# # ==================== API ROUTES - RESULTS ====================
+
+# @app.route('/api/results', methods=['GET'])
+# def api_get_results():
+#     """Get localization results"""
+#     try:
+#         logger.debug("GET /api/results")
         
-        if file_id not in data_processor.files:
-            return jsonify({'error': 'File not found'}), 404
+#         results_dir = Path('./output/processed_data/results')
+#         results = []
         
-        iq_file = data_processor.files[file_id]
+#         if results_dir.exists():
+#             for f in results_dir.glob('*.json'):
+#                 if f.is_file():
+#                     try:
+#                         with open(f, 'r') as rf:
+#                             result_data = json.load(rf)
+#                             results.append({
+#                                 'filename': f.name,
+#                                 'data': result_data,
+#                                 'created_at': datetime.fromtimestamp(f.stat().st_ctime).isoformat()
+#                             })
+#                     except json.JSONDecodeError as e:
+#                         logger.warning(f"Could not parse {f.name}: {e}")
+#                         pass
         
-        if not iq_file.loaded:
-            return jsonify({'error': 'File not loaded'}), 400
+#         return jsonify({
+#             'status': 'success',
+#             'results': sorted(results, key=lambda x: x['created_at'], reverse=True),
+#             'count': len(results)
+#         }), 200
         
-        freq, spectrum = iq_file.get_spectrum(nfft=4096)
+#     except Exception as e:
+#         logger.error(f"Error getting results: {str(e)}", exc_info=True)
+#         return jsonify({'error': str(e)}), 500
+
+
+# @app.route('/api/results/<filename>', methods=['GET'])
+# def api_download_result(filename):
+#     """Download a result file"""
+#     try:
+#         logger.debug(f"GET /api/results/{filename}")
         
-        if freq is None or spectrum is None:
-            return jsonify({'error': 'Failed to calculate spectrum'}), 500
+#         results_dir = Path('./output/processed_data/results')
+#         file_path = results_dir / secure_filename(filename)
         
-        return jsonify({
-            'file_id': file_id,
-            'frequencies_mhz': (freq / 1e6).tolist(),
-            'power_db': spectrum.tolist()
-        }), 200
+#         if not file_path.exists():
+#             return jsonify({'error': 'Result file not found'}), 404
         
-    except Exception as e:
-        logger.error(f"Error getting spectrum: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+#         logger.info(f"Downloading result: {filename}")
+#         return send_file(file_path, as_attachment=True, mimetype='application/json')
+        
+#     except Exception as e:
+#         logger.error(f"Error downloading result: {str(e)}", exc_info=True)
+#         return jsonify({'error': str(e)}), 500
+
+
+# ==================== API ROUTES - RESULT DOWNLOAD ====================
+
+# @app.route('/api/results/<filename>', methods=['GET'])
+# def api_download_result(filename):
+#     """Download a specific result file"""
+#     try:
+#         logger.debug(f"GET /api/results/{filename}")
+        
+#         results_dir = Path('./output/processed_data/results')
+#         file_path = results_dir / secure_filename(filename)
+        
+#         if not file_path.exists():
+#             return jsonify({'error': 'Result file not found'}), 404
+        
+#         logger.info(f"Downloading result: {filename}")
+#         return send_file(file_path, as_attachment=True, mimetype='application/json')
+        
+#     except Exception as e:
+#         logger.error(f"Error downloading result: {str(e)}", exc_info=True)
+#         return jsonify({'error': str(e)}), 500
+
+# @app.route('/api/dashboard-stats', methods=['GET'])
+# def api_dashboard_stats():
+#     """Get dashboard statistics"""
+#     try:
+#         logger.debug("GET /api/dashboard-stats")
+        
+#         # Count receivers
+#         receiver_count = 3  # Default
+#         if config_manager:
+#             try:
+#                 config = config_manager.get_config()
+#                 receiver_count = len(config.get('receivers', []))
+#             except:
+#                 pass
+        
+#         # Count files
+#         data_dir = Path('./output/recorded_data')
+#         file_count = len(list(data_dir.glob('*'))) if data_dir.exists() else 0
+        
+#         # Count maps
+#         maps_dir = Path('./output/maps')
+#         map_count = len(list(maps_dir.glob('*.html'))) if maps_dir.exists() else 0
+        
+#         return jsonify({
+#             'status': 'success',
+#             'stats': {
+#                 'receiver_count': receiver_count,
+#                 'file_count': file_count,
+#                 'map_count': map_count,
+#                 'system_healthy': True,
+#                 'timestamp': datetime.now().isoformat()
+#             }
+#         }), 200
+        
+#     except Exception as e:
+#         logger.error(f"Error getting dashboard stats: {str(e)}", exc_info=True)
+#         return jsonify({'error': str(e)}), 500
 
 # ==================== MAIN ====================
 

@@ -98,42 +98,76 @@
         }
 
         /* ==================== NAV TABS ==================== */
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+          .nav-menu {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 12px !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
             background: white;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            flex-wrap: wrap;
-        }
-
-        .nav-btn {
-            flex: 1;
-            min-width: 120px;
             padding: 12px 20px;
-            border: none;
-            background: #f5f6fa;
-            color: #666;
-            cursor: pointer;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: var(--transition);
-            display: flex;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .nav-btn {
+            display: inline-flex !important;
             align-items: center;
-            justify-content: center;
             gap: 8px;
+            padding: 10px 16px !important;
+            border: none;
+            background: #f0f0f0;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
         }
-
+        
         .nav-btn:hover {
-            background: #efefef;
-            color: var(--primary);
-        }
-
-        .nav-btn.active {
-            background: var(--primary);
+            background: #667eea;
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary {
+            background: #667eea !important;
+            color: white !important;
+        }
+        
+        .btn-primary:hover {
+            background: #764ba2 !important;
+        }
+        
+        /* Tab content styles */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-menu {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            
+            .nav-btn {
+                padding: 8px 12px !important;
+                font-size: 12px;
+            }
         }
 
         /* ==================== TAB CONTENT ==================== */
@@ -723,30 +757,38 @@
             </div>
         </div>
 
-        <!-- ==================== NAV TABS ==================== -->
-        <div class="nav-tabs">
-            <button class="nav-btn active" onclick="switchTab('dashboard')">
-                <i class="fas fa-chart-line"></i> Dashboard
+                <!-- ==================== NAVIGATION BAR - HORIZONTAL ==================== -->
+    <div class="nav-menu" style="display: flex; flex-direction: row; gap: 12px; flex-wrap: wrap; align-items: center; background: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;">
+        <button class="nav-btn" onclick="switchTab('dashboard')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: none; background: #f0f0f0; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s ease; flex-shrink: 0;">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </button>
+        
+        <button class="nav-btn" onclick="switchTab('processing')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: none; background: #f0f0f0; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s ease; flex-shrink: 0;">
+            <i class="fas fa-cogs"></i> Processing
+        </button>
+        
+        <button class="nav-btn" onclick="switchTab('results')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: none; background: #f0f0f0; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s ease; flex-shrink: 0;">
+            <i class="fas fa-chart-line"></i> Results
+        </button>
+        
+        <button class="nav-btn" onclick="switchTab('configuration')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: none; background: #f0f0f0; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s ease; flex-shrink: 0;">
+            <i class="fas fa-sliders-h"></i> Configuration
+        </button>
+        
+        <button class="nav-btn" onclick="switchTab('help')" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: none; background: #f0f0f0; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s ease; flex-shrink: 0;">
+            <i class="fas fa-question-circle"></i> Help
+        </button>
+        
+        <div style="margin-left: auto; display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openUploadModal()" style="cursor: pointer;">
+                <i class="fas fa-upload"></i> Import & Process
             </button>
-            <button class="nav-btn" onclick="switchTab('processing')">
-                <i class="fas fa-cog"></i> Processing
-            </button>
-            <button class="nav-btn" onclick="switchTab('results')">
-                <i class="fas fa-map"></i> Results
-            </button>
-            <button class="nav-btn" onclick="switchTab('configuration')">
-                <i class="fas fa-sliders-h"></i> Configuration
-            </button>
-            <button class="nav-btn" onclick="switchTab('help')">
-                <i class="fas fa-question-circle"></i> Help
-            </button>
-            <button class="btn btn-primary" id="recordBtn">
-                <i class="fas fa-microphone"></i> Start Recording
-            </button>
-            <button class="nav-item" onclick="switchTab('import-data')">
-                 <i class="fas fa-file-import"></i> Import & Process
+            
+            <button class="btn btn-primary" onclick="startRecording()" style="cursor: pointer;">
+                <i class="fas fa-circle"></i> Start Recording
             </button>
         </div>
+    </div>
 
         <!-- ==================== DASHBOARD TAB ==================== -->
         <div id="dashboard" class="tab-content active">
@@ -825,10 +867,10 @@
         </div>
 
         <!-- ==================== RESULTS TAB ==================== -->
-        <div id="results" class="tab-content">
-            <div class="card">
-                <h2><i class="fas fa-map"></i> Results & Maps</h2>
-                <p style="color: #666; margin-bottom: 20px;">View generated localization results</p>
+                <div id="results" class="tab-content" style="display: none;">
+                <div style="padding: 20px;">
+                <h2>📊 Results & Maps</h2>
+                <p style="color: #666; margin-bottom: 30px;">View generated localization results</p>
 
                 <!-- Map Display -->
                 <div id="map" style="display: none;"></div>
@@ -842,23 +884,43 @@
                 </div>
 
                 <!-- Result Summary -->
-                <div id="result-summary" style="margin-top: 20px;">
-                    <!-- Summary content here -->
-                </div>
+                <div id="results-container" style="min-height: 200px;">
+            <div style="text-align: center; padding: 50px; color: #999;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 30px;"></i>
+                <p>Loading results...</p>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Import & Process IQ Data Tab -->
-        <div id="processing" class="tab-content">
-            <div class="page-header">
-                <h1><i class="fas fa-cogs"></i> Signal Processing</h1>
-                <p>Upload raw IQ data files and process for TDOA localization</p>
+        <!-- Signal Processing - Import & Process IQ Data -->
+            <div id="processing" class="tab-content">
+                <div class="page-header">
+                    <h1><i class="fas fa-cloud-upload-alt"></i> Upload & Process IQ Data</h1>
+                    <p>Upload raw IQ files from receivers and process for TDOA localization</p>
+                </div>
+
+                <button class="btn btn-primary btn-lg" onclick="window.tdoaUploader.show()" style="width: 100%; padding: 20px; font-size: 16px; margin-bottom: 20px;">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload Multiple IQ Files
+                </button>
+
+                <div class="card">
+                    <h3>Instructions</h3>
+                    <ol style="line-height: 2;">
+                        <li>Click "Upload Multiple IQ Files" button above</li>
+                        <li>Select 3 .dat files from different receivers</li>
+                        <li>Set reference and target frequencies (87-108 MHz)</li>
+                        <li>Click "Upload & Process All"</li>
+                        <li>Check Results tab for output</li>
+                    </ol>
+                </div>
             </div>
 
             <!-- Quick Action Cards -->
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
                 <!-- Upload Card -->
-                <div class="action-card" onclick="window.tdoaUploader.show()" style="cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                <div id="upload-iq-btn" class="action-card" style="cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                     <div class="action-icon" style="font-size: 40px;">
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
@@ -1441,5 +1503,168 @@
             return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
     </script>
-</body>
-</html
+                </div>
+            </div>
+                    <!-- Recording Dialog Modal -->
+        <div id="recording-dialog" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-width: 500px; width: 90%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">🎬 Start Recording Session</h2>
+                    <button onclick="document.getElementById('recording-dialog').style.display='none'" style="border: none; background: none; font-size: 24px; cursor: pointer;">×</button>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Reference Frequency (MHz):</label>
+                    <input type="number" id="ref-freq-input" min="87" max="108" value="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                    <small style="color: #666;">FM broadcast band: 87-108 MHz</small>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Target Frequency (MHz):</label>
+                    <input type="number" id="target-freq-input" min="87" max="108" value="93.8" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                    <small style="color: #666;">Frequency to be localized</small>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Number of Loops:</label>
+                    <input type="number" id="loops-input" min="1" max="100" value="5" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                    <small style="color: #666;">Recording loops (1 loop = ~3 seconds)</small>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button onclick="document.getElementById('recording-dialog').style.display='none'" class="btn" style="flex: 1; background: #ddd; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmRecording()" class="btn btn-primary" style="flex: 1; background: #667eea; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: 500;">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+            </main>
+        </div>
+
+        <!-- ==================== SCRIPT REFERENCES ==================== -->
+        
+        <!-- API Layer -->
+        <script src="/static/js/api.js"></script>
+        
+        <!-- Multi-File Upload Handler -->
+        <script src="/static/js/upload_handler.js"></script>
+        
+        <!-- Dashboard Functions -->
+        <script src="/static/js/dashboard.js"></script>
+        
+        <!-- Inline Initialization Script -->
+        <script>
+            console.log('🚀 Dashboard initializing...');
+            
+            // Check if scripts loaded
+            let scriptCheckCount = 0;
+            const scriptCheckInterval = setInterval(() => {
+                scriptCheckCount++;
+                
+                if (window.tdoaUploader) {
+                    console.log('✓ All scripts loaded successfully');
+                    console.log('✓ openUploadModal is callable:', typeof openUploadModal === 'function');
+                    console.log('✓ startRecording is callable:', typeof startRecording === 'function');
+                    clearInterval(scriptCheckInterval);
+                } else if (scriptCheckCount > 50) {
+                    console.warn('⚠️ Script loading timeout');
+                    clearInterval(scriptCheckInterval);
+                }
+            }, 100);
+            
+            // Global functions that must be available
+            window.openUploadModal = function() {
+                console.log('🎯 openUploadModal called');
+                if (window.tdoaUploader) {
+                    window.tdoaUploader.show();
+                } else {
+                    alert('Upload handler not ready yet. Please refresh page.');
+                }
+            };
+            
+            window.startRecording = function() {
+                console.log('🎬 startRecording called');
+                const recordingDialog = document.getElementById('recording-dialog');
+                if (recordingDialog) {
+                    recordingDialog.style.display = 'flex';
+                } else {
+                    alert('Recording dialog not found');
+                }
+            };
+            
+            window.switchTab = function(tabName) {
+                console.log(`📑 switchTab('${tabName}') called`);
+                
+                // Hide all tabs
+                const tabs = document.querySelectorAll('.tab-content');
+                tabs.forEach(tab => tab.style.display = 'none');
+                
+                // Remove active from all buttons
+                const buttons = document.querySelectorAll('[onclick*="switchTab"]');
+                buttons.forEach(btn => btn.classList.remove('active'));
+                
+                // Show selected tab
+                const selectedTab = document.getElementById(tabName);
+                if (selectedTab) {
+                    selectedTab.style.display = 'block';
+                }
+                
+                // Mark button as active
+                const activeBtn = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                }
+                
+                console.log(`✓ Switched to ${tabName}`);
+            };
+            
+            window.showAlert = function(message, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                
+                const alertDiv = document.createElement('div');
+                alertDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    font-weight: 500;
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                `;
+                
+                const typeStyles = {
+                    'success': { bg: '#51cf66', color: 'white' },
+                    'error': { bg: '#ff6b6b', color: 'white' },
+                    'warning': { bg: '#ffd43b', color: '#333' },
+                    'info': { bg: '#74c0fc', color: 'white' }
+                };
+                
+                const style = typeStyles[type] || typeStyles['info'];
+                alertDiv.style.background = style.bg;
+                alertDiv.style.color = style.color;
+                alertDiv.innerHTML = `<strong>${message}</strong>`;
+                
+                document.body.appendChild(alertDiv);
+                
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 3000);
+            };
+            
+            console.log('✓ Global functions initialized');
+
+                        window.confirmRecording = function() {
+                const refFreq = document.getElementById('ref-freq-input').value;
+                const targetFreq = document.getElementById('target-freq-input').value;
+                const loops = document.getElementById('loops-input').value;
+                
+                console.log('Starting recording with:', { refFreq, targetFreq, loops });
+                
+                showAlert(`Recording started: Ref ${refFreq} MHz, Target ${targetFreq} MHz, Loops: ${loops}`, 'success');
+                document.getElementById('recording-dialog').style.display = 'none';
+            };
+        </script>
+    </body>
+</html>

@@ -1,4 +1,16 @@
 /**
+ * Logging utility
+ */
+function logDebug(message, data = null) {
+    const timestamp = new Date().toLocaleTimeString();
+    if (data) {
+        console.log(`[${timestamp}] ${message}`, data);
+    } else {
+        console.log(`[${timestamp}] ${message}`);
+    }
+}
+
+/**
  * API Communication Layer
  * Handles all HTTP requests to backend with error handling and logging
  */
@@ -14,27 +26,34 @@ const API = {
         try {
             const url = `${this.baseURL}${endpoint}`;
             
-            // Set default headers
-            const headers = {
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-
             // Set default method
             const method = options.method || 'GET';
 
             // Build config
             const config = {
                 method: method,
-                headers: headers,
                 timeout: this.timeout
             };
 
+            // Set headers only if not FormData
+            if (!(options.body instanceof FormData)) {
+                config.headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+            }
+
             // Add body if present
             if (options.body) {
-                config.body = typeof options.body === 'string' 
-                    ? options.body 
-                    : JSON.stringify(options.body);
+                if (options.body instanceof FormData) {
+                    config.body = options.body;
+                    // Don't set Content-Type for FormData - browser will set it
+                    delete config.headers;
+                } else {
+                    config.body = typeof options.body === 'string' 
+                        ? options.body 
+                        : JSON.stringify(options.body);
+                }
             }
 
             logDebug(`🔗 API Request: ${method} ${endpoint}`);
@@ -104,6 +123,8 @@ const API = {
         return this.request(endpoint, { method: 'DELETE' });
     },
 
+    // ==================== SYSTEM ENDPOINTS ====================
+
     /**
      * Get system status
      */
@@ -126,25 +147,13 @@ const API = {
     },
 
     /**
-     * Get recorded files
-     */
-    async getFiles() {
-        return this.get('/api/files');
-    },
-
-    /**
-     * Get generated maps
-     */
-    async getMaps() {
-        return this.get('/api/maps');
-    },
-
-    /**
      * Get dashboard statistics
      */
     async getDashboardStats() {
         return this.get('/api/dashboard-stats');
     },
+
+    // ==================== RECORDING ENDPOINTS ====================
 
     /**
      * Start recording session
@@ -165,67 +174,6 @@ const API = {
         return this.get(`/api/recording/status/${sessionId}`);
     },
 
-    // ==================== TAMBAH DI SINI ====================
-/**
- * Get list of recorded files from output/recorded_data
- */
-async getRecordedFiles() {
-    return this.get('/api/recorded-files');
-},
-
-/**
- * Get list of imported files 
- */
-async getImportedFiles() {
-    return this.get('/api/imported-files');
-},
-
-/**
- * Import raw IQ file untuk processing
- */
-async importFile(file, sampleRate = 2.4e6) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('sample_rate', sampleRate);
-    
-    return this.request('/api/import-file', {
-        method: 'POST',
-        body: formData,
-        headers: {} // FormData akan set header otomatis
-    });
-},
-
-/**
- * Process file dengan TDOA calculation
- */
-async processFile(fileId, refFreq) {
-    return this.get(`/api/process-file/${fileId}?ref_freq=${refFreq}`);
-},
-
-/**
- * Process multiple files untuk TDOA
- */
-async processMultipleFiles(fileIds, refFreq) {
-    return this.post('/api/process-multiple-files', {
-        file_ids: fileIds,
-        ref_freq_mhz: refFreq
-    });
-},
-
-/**
- * Get spectrum visualization data
- */
-async getSpectrum(fileId) {
-    return this.get(`/api/spectrum/${fileId}`);
-},
-
-/**
- * Delete imported file
- */
-async deleteFile(fileId) {
-    return this.request(`/api/delete-file/${fileId}`, { method: 'DELETE' });
-},
-
     /**
      * Cancel recording
      */
@@ -234,24 +182,58 @@ async deleteFile(fileId) {
     },
 
     /**
-     * Start processing
+     * Get list of recorded files
      */
-    async startProcessing(files, params) {
-        return this.post('/api/processing/start', {
-            files: files,
-            parameters: params
+    async getRecordedFiles() {
+        return this.get('/api/recorded-files');
+    },
+
+    // ==================== FILE PROCESSING ENDPOINTS ====================
+
+    /**
+     * Get list of imported IQ files
+     */
+    async getImportedFiles() {
+        return this.get('/api/imported-files');
+    },
+
+    /**
+     * Import raw IQ file for processing
+     * @param {File} file - The .dat or .iq file to import
+     * @param {number} sampleRate - Sample rate in Hz (default: 2.4e6)
+     */
+    async importFile(file, sampleRate = 2.4e6) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('sample_rate', sampleRate);
+        
+        return this.request('/api/import-file', {
+            method: 'POST',
+            body: formData
         });
     },
 
     /**
-     * Get processing status
+     * Delete imported file
      */
-    async getProcessingStatus(sessionId) {
-        return this.get(`/api/processing/status/${sessionId}`);
+    async deleteFile(fileId) {
+        return this.delete(`/api/delete-file/${fileId}`);
     },
 
     /**
-     * Process multiple files untuk TDOA
+     * Get spectrum data for visualization
+     */
+    async getSpectrum(fileId) {
+        return this.get(`/api/spectrum/${fileId}`);
+    },
+
+    // ==================== TDOA PROCESSING ENDPOINTS ====================
+
+    /**
+     * Process multiple files for TDOA localization
+     * @param {Array} fileIds - List of file IDs to process
+     * @param {number} refFreq - Reference frequency in MHz
+     * @param {number} targetFreq - Target frequency in MHz
      */
     async processMultipleFiles(fileIds, refFreq, targetFreq) {
         return this.post('/api/process-multiple-files', {
@@ -262,35 +244,43 @@ async deleteFile(fileId) {
     },
 
     /**
-     * Get imported files
-     */
-    async getImportedFiles() {
-        return this.get('/api/imported-files');
-    },
-
-    /**
-     * Delete file
-     */
-    async deleteFile(fileId) {
-        return this.request(`/api/delete-file/${fileId}`, { method: 'DELETE' });
-    },
-
-    /**
-     * Get processing status
+     * Get processing job status
      */
     async getProcessingStatus(jobId) {
         return this.get(`/api/processing/status/${jobId}`);
+    },
+
+    // ==================== RESULTS & MAPS ENDPOINTS ====================
+
+    /**
+     * Get generated maps
+     */
+    async getMaps() {
+        return this.get('/api/maps');
+    },
+
+    /**
+     * Get localization results
+     */
+    async getResults() {
+        return this.get('/api/results');
+    },
+
+    /**
+     * Get files list
+     */
+    async getFiles() {
+        return this.get('/api/files');
+    },
+
+    async downloadResult(filename) {
+        window.location.href = `/api/results/${filename}`;
+    },
+    
+    async getDashboardStats() {
+    return this.get('/api/dashboard-stats');
     }
 };
 
-/**
- * Helper function for logging (used by API)
- */
-function logDebug(message, data = null) {
-    const timestamp = new Date().toLocaleTimeString();
-    if (data) {
-        console.log(`[${timestamp}] ${message}`, data);
-    } else {
-        console.log(`[${timestamp}] ${message}`);
-    }
-}
+// Log API initialization
+logDebug('✓ API layer initialized', { baseURL: API.baseURL, timeout: API.timeout });

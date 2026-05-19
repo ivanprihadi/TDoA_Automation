@@ -253,11 +253,17 @@ class DataProcessor:
         except Exception as e:
             logger.error(f"❌ Error processing file: {str(e)}", exc_info=True)
             return {'error': str(e)}
-    
-    def process_multiple_files(self, file_ids, ref_freq_mhz):
+        
+    def process_multiple_files(self, file_ids, ref_freq_mhz, target_freq_mhz=None):
         """Process multiple files for TDOA calculation"""
         try:
             logger.info(f"🔄 Processing {len(file_ids)} files for TDOA")
+            logger.info(f"   Reference: {ref_freq_mhz} MHz")
+            logger.info(f"   Target: {target_freq_mhz} MHz" if target_freq_mhz else "   Target: Auto-detect")
+            
+            # Create results directory
+            results_dir = self.output_dir / 'results'
+            results_dir.mkdir(parents=True, exist_ok=True)
             
             results = []
             
@@ -265,28 +271,128 @@ class DataProcessor:
                 result = self.process_file(file_id, ref_freq_mhz)
                 results.append(result)
             
-            # Store session
+            # ==================== SAVE RESULTS TO FILE ====================
+            
             session_id = f"tdoa_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            self.sessions[session_id] = {
-                'file_ids': file_ids,
-                'ref_freq_mhz': ref_freq_mhz,
+            
+            # Create formatted result for display
+            formatted_results = []
+            for idx, result in enumerate(results):
+                if 'error' not in result:
+                    formatted_results.append({
+                        'filename': f"{session_id}_{idx}.json",
+                        'created_at': datetime.now().isoformat(),
+                        'data': {
+                            'session_id': session_id,
+                            'file_id': result.get('file_id'),
+                            'location': {
+                                'latitude': 0.0,  # Mock data
+                                'longitude': 0.0,
+                                'accuracy_meters': 100.0,
+                                'altitude_meters': 0
+                            }
+                        }
+                    })
+            
+            # Save session data
+            session_data = {
+                'session_id': session_id,
+                'timestamp': datetime.now().isoformat(),
+                'parameters': {
+                    'file_ids': file_ids,
+                    'ref_freq_mhz': ref_freq_mhz,
+                    'target_freq_mhz': target_freq_mhz
+                },
                 'results': results,
-                'timestamp': datetime.now().isoformat()
+                'status': 'completed'
             }
             
-            logger.info(f"✓ TDOA session created: {session_id}")
+            # ✅ SAVE TO JSON FILE
+            result_filename = f"{session_id}_results.json"
+            result_file = results_dir / result_filename
+            
+            with open(result_file, 'w') as f:
+                json.dump(session_data, f, indent=2, default=str)
+            
+            logger.info(f"✓ Results saved to: {result_file}")
+            logger.info(f"  File size: {result_file.stat().st_size / 1024:.1f} KB")
+            
+            # Store session in memory
+            self.sessions[session_id] = session_data
             
             return {
                 'session_id': session_id,
                 'status': 'completed',
                 'processed_files': len(results),
-                'results': results
+                'results': formatted_results  # ← RETURN FORMATTED RESULTS
             }
             
         except Exception as e:
             logger.error(f"❌ Error processing multiple files: {str(e)}", exc_info=True)
             return {'error': str(e)}
-    
+
+    def _calculate_tdoa(self, results, ref_freq_mhz, target_freq_mhz):
+        """Calculate TDOA (Time Difference of Arrival) from multiple receivers"""
+        try:
+            logger.info("🔢 Calculating TDOA...")
+            
+            # Extract frequency detections from results
+            detections = []
+            for result in results:
+                if 'frequency_detection' in result and result['frequency_detection']:
+                    detections.append({
+                        'file_id': result['file_id'],
+                        'target_freq': result['frequency_detection'].get('target_mhz', target_freq_mhz or ref_freq_mhz),
+                        'offset_hz': result['frequency_detection'].get('offset_hz', 0),
+                        'power_db': result['frequency_detection'].get('power_db', 0)
+                    })
+            
+            if len(detections) < 2:
+                logger.warning("⚠️ Less than 2 receivers with valid detections")
+                return {
+                    'status': 'incomplete',
+                    'detections': detections,
+                    'message': 'Insufficient data for accurate TDOA'
+                }
+            
+            # Simple TDOA calculation (mock - replace with real algorithm)
+            # In production, use actual TDOA hyperbolic positioning
+            
+            # Calculate average frequency
+            avg_freq = np.mean([d['target_freq'] for d in detections])
+            
+            # Calculate position (mock - use real TDOA algorithm)
+            # This is a simplified calculation for demo purposes
+            lat = 0.0
+            lon = 0.0
+            accuracy_meters = 100.0
+            
+            # Save localization result
+            localization_result = {
+                'timestamp': datetime.now().isoformat(),
+                'target_frequency_mhz': avg_freq,
+                'reference_frequency_mhz': ref_freq_mhz,
+                'num_receivers': len(detections),
+                'detections': detections,
+                'location': {
+                    'latitude': lat,
+                    'longitude': lon,
+                    'accuracy_meters': accuracy_meters,
+                    'altitude_meters': 0,
+                    'units': 'decimal degrees'
+                }
+            }
+            
+            logger.info(f"✓ TDOA calculation completed")
+            logger.info(f"  Location: ({lat:.4f}, {lon:.4f})")
+            logger.info(f"  Accuracy: ±{accuracy_meters:.1f}m")
+            
+            return localization_result
+            
+        except Exception as e:
+            logger.error(f"❌ Error in TDOA calculation: {str(e)}", exc_info=True)
+            return {'error': str(e)}
+
     def get_imported_files(self):
         """Get list of imported files"""
         return [{

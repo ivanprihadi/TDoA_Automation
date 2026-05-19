@@ -202,11 +202,11 @@ class TDOAMultiUploadHandler {
 
         boxes.forEach(box => {
             const receiverId = box.dataset.receiver;
-            const fileInput = box.querySelector('.file-input');
+            const fileInput = box.querySelector('input[type="file"]');
 
             // Click to browse
             box.addEventListener('click', () => {
-                box.querySelector('input[type="file"]').click();
+                fileInput.click();
             });
 
             // File input change
@@ -330,150 +330,281 @@ class TDOAMultiUploadHandler {
         this.updateUploadButton();
     }
 
-    // ==================== START UPLOAD ====================
-    async startUpload() {
-        const sampleRate = parseFloat(document.getElementById('global-sample-rate').value);
-        const refFreq = parseFloat(document.getElementById('global-ref-freq').value);
-        const targetFreq = parseFloat(document.getElementById('global-target-freq').value);
+        // ==================== START UPLOAD ====================
+        async startUpload() {
+            const sampleRate = parseFloat(document.getElementById('global-sample-rate').value);
+            const refFreq = parseFloat(document.getElementById('global-ref-freq').value);
+            const targetFreq = parseFloat(document.getElementById('global-target-freq').value);
 
-        // Validate
-        if (isNaN(sampleRate) || sampleRate <= 0) {
-            showAlert('Invalid sample rate', 'error');
-            return;
-        }
-
-        if (isNaN(refFreq) || refFreq < 87 || refFreq > 108) {
-            showAlert('Invalid reference frequency', 'error');
-            return;
-        }
-
-        if (isNaN(targetFreq) || targetFreq < 87 || targetFreq > 108) {
-            showAlert('Invalid target frequency', 'error');
-            return;
-        }
-
-        if (refFreq === targetFreq) {
-            showAlert('Reference and target frequencies must be different', 'error');
-            return;
-        }
-
-        // Start upload
-        console.log('Starting upload with config:', { sampleRate, refFreq, targetFreq });
-
-        const totalSessions = this.sessions.length;
-        let completedSessions = 0;
-
-        document.getElementById('upload-progress-container').style.display = 'block';
-        document.getElementById('start-upload-btn').disabled = true;
-
-        for (const session of this.sessions) {
-            await this.uploadSession(session, sampleRate, refFreq, targetFreq);
-            completedSessions++;
-            
-            const progress = Math.round((completedSessions / totalSessions) * 100);
-            document.getElementById('upload-progress-fill').style.width = `${progress}%`;
-            document.getElementById('upload-progress-text').textContent = `${completedSessions}/${totalSessions}`;
-        }
-
-        showAlert(`✓ Uploaded ${totalSessions} session(s)!`, 'success');
-        
-        document.getElementById('upload-progress-container').style.display = 'none';
-        document.getElementById('start-upload-btn').disabled = false;
-
-        setTimeout(() => {
-            document.getElementById('tdoa-upload-modal').style.display = 'none';
-            // Reload imported files
-            if (window.loadImportedFiles) {
-                window.loadImportedFiles();
+            // Validate
+            if (isNaN(sampleRate) || sampleRate <= 0) {
+                showAlert('❌ Invalid sample rate', 'error');
+                return;
             }
-        }, 1500);
-    }
+
+            if (isNaN(refFreq) || refFreq < 87 || refFreq > 108) {
+                showAlert('❌ Invalid reference frequency (87-108 MHz)', 'error');
+                return;
+            }
+
+            if (isNaN(targetFreq) || targetFreq < 87 || targetFreq > 108) {
+                showAlert('❌ Invalid target frequency (87-108 MHz)', 'error');
+                return;
+            }
+
+            if (refFreq === targetFreq) {
+                showAlert('❌ Reference and target frequencies must be different', 'error');
+                return;
+            }
+
+            console.log('🚀 Starting upload with config:', { sampleRate, refFreq, targetFreq });
+
+            const totalSessions = this.sessions.length;
+            let completedSessions = 0;
+
+            document.getElementById('upload-progress-container').style.display = 'block';
+            document.getElementById('start-upload-btn').disabled = true;
+
+            // ✅ PROCESS EACH SESSION SEQUENTIALLY WITH PROPER AWAIT
+            for (let i = 0; i < this.sessions.length; i++) {
+                const session = this.sessions[i];
+                console.log(`📦 Processing session ${i + 1}/${totalSessions}`);
+                
+                await this.uploadSession(session, sampleRate, refFreq, targetFreq);
+                
+                completedSessions++;
+                
+                // ✅ UPDATE PROGRESS BAR
+                const progress = Math.round((completedSessions / totalSessions) * 100);
+                const progressFill = document.getElementById('upload-progress-fill');
+                const progressText = document.getElementById('upload-progress-text');
+                
+                if (progressFill) {
+                    progressFill.style.width = `${progress}%`;
+                }
+                
+                if (progressText) {
+                    progressText.textContent = `${completedSessions}/${totalSessions}`;
+                }
+                
+                console.log(`✓ Session ${completedSessions}/${totalSessions} complete`);
+            }
+
+            console.log('✓ All sessions uploaded successfully');
+            // ==================== SETELAH UPLOAD & PROCESS COMPLETE ====================
+
+            showAlert(`✓ Uploaded ${totalSessions} session(s)!`, 'success');
+            
+            // Show loading message
+            document.getElementById('upload-status-text').textContent = 
+                `✓ Upload complete! Generating results... Please wait a moment before checking Results tab.`;
+            
+            // Wait 2 seconds then close modal
+            setTimeout(() => {
+                console.log('⏳ Closing modal...');
+                document.getElementById('tdoa-upload-modal').style.display = 'none';
+                document.getElementById('upload-progress-container').style.display = 'none';
+                document.getElementById('start-upload-btn').disabled = false;
+                
+                // Show notification
+                showAlert('📊 Results are being generated. Switching to Results tab...', 'info');
+                
+                // Switch to Results tab
+                setTimeout(() => {
+                    switchTab('results');
+                    console.log('Switched to results tab');
+                    
+                    // Load results immediately
+                    if (window.loadResultsData) {
+                        console.log('Loading results data...');
+                        window.loadResultsData();
+                    }
+                }, 500);
+                
+            }, 2000);
+        }
+
 
     // ==================== UPLOAD SESSION ====================
-    async uploadSession(session, sampleRate, refFreq, targetFreq) {
-        const fileIds = [];
-        const files = [session.receiver1, session.receiver2, session.receiver3];
+        async uploadSession(session, sampleRate, refFreq, targetFreq) {
+            const fileIds = [];
+            const files = [session.receiver1, session.receiver2, session.receiver3];
 
-        for (let i = 0; i < files.length; i++) {
-            const fileObj = files[i];
-            const statusText = document.getElementById('upload-status-text');
-            
-            statusText.textContent = `Uploading: ${fileObj.name}...`;
+            console.log(`📤 Uploading session with ${files.length} files`);
 
-            try {
-                const formData = new FormData();
-                formData.append('file', fileObj.file);
-                formData.append('sample_rate', sampleRate * 1e6);
+            for (let i = 0; i < files.length; i++) {
+                const fileObj = files[i];
+                const statusText = document.getElementById('upload-status-text');
+                
+                if (statusText) {
+                    statusText.textContent = `Uploading (${i+1}/${files.length}): ${fileObj.name}...`;
+                }
+                console.log(`📁 Uploading file ${i+1}: ${fileObj.name}`);
 
-                const response = await fetch('/api/import-file', {
-                    method: 'POST',
-                    body: formData
-                });
+                try {
+                    const formData = new FormData();
+                    formData.append('file', fileObj.file);
+                    formData.append('sample_rate', sampleRate);  // ✅ Already in Hz
 
-                if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.statusText}`);
+                    console.log(`Sending to /api/import-file:`, {
+                        filename: fileObj.name,
+                        size: `${(fileObj.size / (1024*1024)).toFixed(2)} MB`,
+                        sampleRate: `${(sampleRate / 1e6).toFixed(1)} MSPS`
+                    });
+
+                    const response = await fetch('/api/import-file', {
+                        method: 'POST',
+                        body: formData,
+                        timeout: 30000
+                    });
+
+                    console.log(`Response status: ${response.status}`);
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errorMsg = errorData.error || `Upload failed with status ${response.status}`;
+                        throw new Error(errorMsg);
+                    }
+
+                    const result = await response.json();
+                    console.log(`✓ Upload success for ${fileObj.name}:`, result);
+
+                    // Handle various response formats from backend
+                    let fileId = null;
+
+                    if (result.file_id) {
+                        fileId = result.file_id;
+                    } else if (result.data && result.data.file_id) {
+                        fileId = result.data.file_id;
+                    } else if (result.success && typeof result.data === 'string') {
+                        fileId = result.data;  // Sometimes backend returns file_id as direct data
+                    }
+
+                    if (fileId) {
+                        fileIds.push(fileId);
+                        console.log(`✓ File ID added: ${fileId}`);
+                    } else {
+                        throw new Error(`No file_id in response: ${JSON.stringify(result)}`);
+                    }
+
+                } catch (error) {
+                    console.error(`❌ Error uploading ${fileObj.name}:`, error.message);
+                    const msg = `Failed to upload ${fileObj.name}: ${error.message}`;
+                    if (window.showAlert) {
+                        showAlert(msg, 'error');
+                    }
+                    // Continue to next file
+                }
+            }
+
+            console.log(`Upload phase complete: ${fileIds.length}/3 files uploaded`);
+
+            // ✅ PROCESS FILES IF ALL UPLOADED
+            if (fileIds.length === 3) {
+                const statusText = document.getElementById('upload-status-text');
+                if (statusText) {
+                    statusText.textContent = `✓ Uploads complete. Processing ${fileIds.length} files for TDOA...`;
                 }
 
-                const result = await response.json();
+                try {
+                    console.log(`🔄 Starting TDOA processing with file IDs:`, fileIds);
 
-                if (result.file_id) {
-                    fileIds.push(result.file_id);
+                    const response = await fetch('/api/process-multiple-files', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            file_ids: fileIds,
+                            ref_freq_mhz: refFreq,
+                            target_freq_mhz: targetFreq
+                        }),
+                        timeout: 60000
+                    });
+
+                    console.log(`Processing response status: ${response.status}`);
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const errorMsg = errorData.error || `Processing failed with status ${response.status}`;
+                        throw new Error(errorMsg);
+                    }
+
+                    const result = await response.json();
+                    console.log('✓ Processing initiated:', result);
+                    
+                    if (statusText) {
+                        statusText.textContent = `✓ Processing initiated! Job ID: ${result.session_id || 'N/A'}`;
+                    }
+
+                } catch (error) {
+                    console.error('❌ Processing error:', error.message);
+                    const msg = `Processing failed: ${error.message}`;
+                    if (window.showAlert) {
+                        showAlert(msg, 'error');
+                    }
                 }
-
-            } catch (error) {
-                console.error(`Error uploading ${fileObj.name}:`, error);
-                showAlert(`❌ Failed to upload ${fileObj.name}`, 'error');
+            } else {
+                const msg = `⚠️ Only ${fileIds.length}/3 files uploaded successfully. Skipping processing.`;
+                console.warn(msg);
+                if (window.showAlert) {
+                    showAlert(msg, 'warning');
+                }
             }
         }
 
-        // Process files if all uploaded
-        if (fileIds.length === 3) {
-            document.getElementById('upload-status-text').textContent = 
-                `Processing ${fileIds.length} files for TDOA...`;
-
-            try {
-                const response = await fetch('/api/process-multiple-files', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        file_ids: fileIds,
-                        ref_freq_mhz: refFreq,
-                        target_freq_mhz: targetFreq
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Processing failed: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                console.log('✓ Processing result:', result);
-
-            } catch (error) {
-                console.error('Processing error:', error);
-                showAlert('❌ Processing failed', 'error');
-            }
-        }
-    }
-
-    // ==================== SHOW MODAL ====================
-    show() {
-        // Reset
-        this.sessions = [];
-        document.getElementById('upload-sessions-container').innerHTML = '';
-        document.getElementById('start-upload-btn').disabled = true;
-        
+  
+// ==================== SHOW MODAL ====================
+show() {
+    console.log('🎯 Show modal called');
+    
+    // ✅ JANGAN RESET SESSIONS - hanya clear container jika belum ada
+    if (this.sessions.length === 0) {
         this.addSession();
-        document.getElementById('tdoa-upload-modal').style.display = 'block';
+    }
+    
+    document.getElementById('upload-progress-container').style.display = 'none';
+    document.getElementById('upload-progress-fill').style.width = '0%';
+    document.getElementById('upload-progress-text').textContent = '0/0';
+    document.getElementById('start-upload-btn').disabled = false;
+    
+    const modal = document.getElementById('tdoa-upload-modal');
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+    
+    console.log(`✓ Modal shown. Sessions: ${this.sessions.length}`);
+    console.log(this.sessions);
+}
+}
+    // ==================== INITIALIZATION ====================
+
+// ✅ SESUDAH - dengan global showAlert reference
+function initTDOAUploadHandler() {
+    try {
+        // Ensure showAlert is available
+        if (typeof showAlert === 'undefined') {
+            window.showAlert = function(msg, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${msg}`);
+                // Will use toast later when dashboard loads
+            };
+        }
+        
+        if (!window.tdoaUploader) {
+            window.tdoaUploader = new TDOAMultiUploadHandler();
+            console.log('✓ TDOA Multi-Upload Handler Created');
+        }
+        return window.tdoaUploader;
+    } catch (error) {
+        console.error('❌ Failed to initialize upload handler:', error);
+        return null;
     }
 }
 
-// Initialize
-typeof window !== 'undefined' && (window.tdoaUploader = null);
-document.addEventListener('DOMContentLoaded', () => {
-    window.tdoaUploader = new TDOAMultiUploadHandler();
-    console.log('✓ TDOA Multi-Upload Handler Initialized');
-});
+// Initialize immediately if document ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTDOAUploadHandler);
+} else {
+    initTDOAUploadHandler();
+}
 
+console.log('✓ upload_handler.js script fully loaded');
